@@ -1,0 +1,527 @@
+// LAUF OS - Personal Operating System
+// Database schema for Prisma ORM
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================================================
+// ENUMS
+// ============================================================================
+
+enum TaskCategory {
+  DESIGN
+  CODE
+  CLIENT
+  LEARNING
+  FITNESS
+  ADMIN
+  SAAS
+  NETWORKING
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  BLOCKED
+  DONE
+}
+
+enum EnergyLevel {
+  DEEP_WORK
+  MODERATE
+  LIGHT
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum ClientStatus {
+  ACTIVE
+  PAUSED
+  COMPLETED
+  CHURNED
+}
+
+enum HealthScore {
+  GREEN
+  YELLOW
+  RED
+}
+
+enum PaymentStatus {
+  CURRENT
+  PENDING
+  OVERDUE
+}
+
+enum ProjectType {
+  WEBSITE
+  WEBAPP
+  MOBILE
+  BRANDING
+  OTHER
+}
+
+enum ProjectStatus {
+  PLANNING
+  DESIGN
+  DEVELOPMENT
+  REVIEW
+  LAUNCHED
+}
+
+enum GoalType {
+  DAILY
+  WEEKLY
+  MONTHLY
+  YEARLY
+}
+
+enum AssetType {
+  IMAGE
+  VIDEO
+  DOCUMENT
+  CODE
+  DESIGN
+  OTHER
+}
+
+enum LibraryItemType {
+  INSPIRATION
+  TEMPLATE
+  AI_IMAGE
+  COMPONENT
+  IDEA
+}
+
+// ============================================================================
+// CORE MODELS
+// ============================================================================
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String?
+  avatarUrl String?  @map("avatar_url")
+  preferences Json   @default("{}")
+  timezone  String   @default("America/New_York")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  tasks         Task[]
+  goals         Goal[]
+  clients       Client[]
+  libraryItems  LibraryItem[]
+  assets        Asset[]
+  workouts      Workout[]
+  dailyCheckIns DailyCheckIn[]
+  transactions  Transaction[]
+  contacts      Contact[]
+  socialPosts   SocialPost[]
+  feedSources   FeedSource[]
+  aiTools       AITool[]
+
+  @@map("users")
+}
+
+model Task {
+  id               String       @id @default(uuid())
+  userId           String       @map("user_id")
+  projectId        String?      @map("project_id")
+  title            String
+  description      String?
+  category         TaskCategory
+  priority         Priority     @default(MEDIUM)
+  status           TaskStatus   @default(TODO)
+  scheduledDate    DateTime?    @map("scheduled_date") @db.Date
+  scheduledTime    String?      @map("scheduled_time") // "09:00" format
+  timeBlockMinutes Int          @default(90) @map("time_block_minutes")
+  energyLevel      EnergyLevel  @default(MODERATE) @map("energy_level")
+  linkedAssets     String[]     @default([]) @map("linked_assets")
+  completedAt      DateTime?    @map("completed_at")
+  createdAt        DateTime     @default(now()) @map("created_at")
+  updatedAt        DateTime     @updatedAt @map("updated_at")
+
+  // Relations
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([projectId])
+  @@index([scheduledDate])
+  @@index([status])
+  @@map("tasks")
+}
+
+model Goal {
+  id           String    @id @default(uuid())
+  userId       String    @map("user_id")
+  title        String
+  description  String?
+  type         GoalType
+  targetValue  Int?      @map("target_value")
+  currentValue Int       @default(0) @map("current_value")
+  dueDate      DateTime? @map("due_date")
+  completedAt  DateTime? @map("completed_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([type])
+  @@map("goals")
+}
+
+// ============================================================================
+// CLIENT CRM MODELS
+// ============================================================================
+
+model Client {
+  id              String        @id @default(uuid())
+  userId          String        @map("user_id")
+  name            String
+  email           String?
+  phone           String?
+  company         String?
+  industry        String?
+  websiteUrl      String?       @map("website_url")
+  githubUrl       String?       @map("github_url")
+  vercelUrl       String?       @map("vercel_url")
+  figmaUrl        String?       @map("figma_url")
+  credentials     String?       // Encrypted
+  status          ClientStatus  @default(ACTIVE)
+  healthScore     HealthScore   @default(GREEN) @map("health_score")
+  contractValue   Decimal?      @map("contract_value") @db.Decimal(10, 2)
+  monthlyRetainer Decimal?      @map("monthly_retainer") @db.Decimal(10, 2)
+  paymentStatus   PaymentStatus @default(CURRENT) @map("payment_status")
+  lastContacted   DateTime?     @map("last_contacted")
+  nextFollowup    DateTime?     @map("next_followup")
+  referredBy      String?       @map("referred_by")
+  notes           String?
+  metadata        Json          @default("{}")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+
+  // Relations
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projects      Project[]
+  assets        Asset[]
+  opportunities Opportunity[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([healthScore])
+  @@map("clients")
+}
+
+model Project {
+  id            String        @id @default(uuid())
+  clientId      String        @map("client_id")
+  name          String
+  description   String?
+  type          ProjectType   @default(WEBSITE)
+  status        ProjectStatus @default(PLANNING)
+  priority      Priority      @default(MEDIUM)
+  startDate     DateTime?     @map("start_date") @db.Date
+  dueDate       DateTime?     @map("due_date") @db.Date
+  budget        Decimal?      @db.Decimal(10, 2)
+  paidAmount    Decimal       @default(0) @map("paid_amount") @db.Decimal(10, 2)
+  repositoryUrl String?       @map("repository_url")
+  stagingUrl    String?       @map("staging_url")
+  productionUrl String?       @map("production_url")
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+
+  // Relations
+  client Client  @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  tasks  Task[]
+  assets Asset[]
+
+  @@index([clientId])
+  @@index([status])
+  @@map("projects")
+}
+
+model Opportunity {
+  id          String   @id @default(uuid())
+  clientId    String   @map("client_id")
+  title       String
+  description String?
+  value       Decimal? @db.Decimal(10, 2)
+  isAiGenerated Boolean @default(false) @map("is_ai_generated")
+  isDismissed Boolean  @default(false) @map("is_dismissed")
+  isConverted Boolean  @default(false) @map("is_converted")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+  @@map("opportunities")
+}
+
+// ============================================================================
+// ASSET & LIBRARY MODELS
+// ============================================================================
+
+model Asset {
+  id            String    @id @default(uuid())
+  userId        String    @map("user_id")
+  projectId     String?   @map("project_id")
+  clientId      String?   @map("client_id")
+  libraryItemId String?   @map("library_item_id")
+  type          AssetType
+  category      String?   // screenshot, mockup, etc.
+  name          String
+  storagePath   String    @map("storage_path")
+  url           String
+  thumbnailUrl  String?   @map("thumbnail_url")
+  fileSize      Int       @map("file_size")
+  mimeType      String    @map("mime_type")
+  tags          String[]  @default([])
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project     Project?     @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  client      Client?      @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  libraryItem LibraryItem? @relation(fields: [libraryItemId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([projectId])
+  @@index([clientId])
+  @@index([libraryItemId])
+  @@map("assets")
+}
+
+model LibraryItem {
+  id          String          @id @default(uuid())
+  userId      String          @map("user_id")
+  type        LibraryItemType
+  title       String
+  description String?
+  sourceUrl   String?         @map("source_url")
+  figmaUrl    String?         @map("figma_url")
+  githubUrl   String?         @map("github_url")
+  prompt      String?         // AI prompt used
+  aiTool      String?         @map("ai_tool") // midjourney, nanobanana, etc.
+  techStack   String[]        @default([]) @map("tech_stack")
+  tags        String[]        @default([])
+  isShowcased Boolean         @default(false) @map("is_showcased")
+  isForSale   Boolean         @default(false) @map("is_for_sale")
+  price       Decimal?        @db.Decimal(10, 2)
+  createdAt   DateTime        @default(now()) @map("created_at")
+  updatedAt   DateTime        @updatedAt @map("updated_at")
+
+  // Relations
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assets Asset[]
+
+  @@index([userId])
+  @@index([type])
+  @@map("library_items")
+}
+
+// ============================================================================
+// HEALTH MODELS
+// ============================================================================
+
+model Workout {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  name        String
+  exercises   Json     @default("[]") // Array of { name, sets, reps, weight }
+  duration    Int?     // minutes
+  notes       String?
+  completedAt DateTime @map("completed_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([completedAt])
+  @@map("workouts")
+}
+
+model DailyCheckIn {
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  date       DateTime @db.Date
+  mood       Int?     // 1-10
+  energy     Int?     // 1-10
+  sleep      Int?     // hours
+  stress     Int?     // 1-10
+  notes      String?
+  soberDays  Int?     @map("sober_days")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([userId])
+  @@map("daily_check_ins")
+}
+
+// ============================================================================
+// FINANCIAL MODELS
+// ============================================================================
+
+model Transaction {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  type        String   // income, expense
+  category    String   // salary, client_payment, subscription, etc.
+  amount      Decimal  @db.Decimal(10, 2)
+  description String?
+  date        DateTime @db.Date
+  metadata    Json     @default("{}")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([date])
+  @@index([type])
+  @@map("transactions")
+}
+
+// ============================================================================
+// RELATIONSHIPS MODELS
+// ============================================================================
+
+model Contact {
+  id            String    @id @default(uuid())
+  userId        String    @map("user_id")
+  name          String
+  email         String?
+  phone         String?
+  company       String?
+  role          String?
+  relationship  String?   // friend, colleague, mentor, etc.
+  xHandle       String?   @map("x_handle")
+  linkedinUrl   String?   @map("linkedin_url")
+  notes         String?
+  lastContacted DateTime? @map("last_contacted")
+  nextFollowup  DateTime? @map("next_followup")
+  metadata      Json      @default("{}")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("contacts")
+}
+
+// ============================================================================
+// SOCIAL MODELS
+// ============================================================================
+
+model SocialPost {
+  id           String    @id @default(uuid())
+  userId       String    @map("user_id")
+  platform     String    @default("x") // x, linkedin, etc.
+  content      String
+  mediaUrls    String[]  @default([]) @map("media_urls")
+  scheduledFor DateTime? @map("scheduled_for")
+  publishedAt  DateTime? @map("published_at")
+  externalId   String?   @map("external_id") // ID on the platform
+  metrics      Json      @default("{}") // likes, retweets, etc.
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([scheduledFor])
+  @@map("social_posts")
+}
+
+// ============================================================================
+// INTEL FEED MODELS
+// ============================================================================
+
+model FeedSource {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  name      String
+  url       String   // RSS feed URL
+  category  String   // business, design, dev, ai, etc.
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user  User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items FeedItem[]
+
+  @@index([userId])
+  @@map("feed_sources")
+}
+
+model FeedItem {
+  id          String    @id @default(uuid())
+  sourceId    String    @map("source_id")
+  title       String
+  url         String
+  summary     String?
+  imageUrl    String?   @map("image_url")
+  publishedAt DateTime  @map("published_at")
+  isSaved     Boolean   @default(false) @map("is_saved")
+  isRead      Boolean   @default(false) @map("is_read")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  source FeedSource @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+
+  @@index([sourceId])
+  @@index([publishedAt])
+  @@map("feed_items")
+}
+
+// ============================================================================
+// AI HUB MODELS
+// ============================================================================
+
+model AITool {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  name        String
+  provider    String   // anthropic, openai, etc.
+  monthlyCost Decimal? @map("monthly_cost") @db.Decimal(10, 2)
+  bestFor     String[] @default([]) @map("best_for")
+  notes       String?
+  cheatSheet  String?  @map("cheat_sheet")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("ai_tools")
+}

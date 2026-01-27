@@ -1,515 +1,410 @@
 # Database Schema
 
-> Detailed database schema for LAUF OS with migration strategy
+> Prisma-based database schema for LAUF OS
 
 ---
 
 ## Overview
 
-LAUF OS uses PostgreSQL via Supabase with Row Level Security (RLS) enabled on all tables. The schema is designed for:
+LAUF OS uses Prisma 7 as the ORM with PostgreSQL (via Supabase). The schema supports all 9 modules with a focus on the MVP (Command Center + Client CRM).
 
-- Single-user MVP (you only)
-- Soft deletes for data recovery
-- Audit trails with timestamps
-- Efficient queries with proper indexes
+### Key Concepts
 
----
-
-## Status
-
-| Table | Status | RLS | Notes |
-|-------|--------|-----|-------|
-| `users` | Planned | Yes | Extended from Supabase auth.users |
-| `content_ideas` | Planned | Yes | Core content table |
-| `post_metrics` | Planned (V0.3) | Yes | X post performance |
-| `feed_sources` | Planned (V0.2) | Yes | RSS and X account sources |
-| `feed_items` | Planned (V0.2) | Yes | Ingested feed content |
-| `learning_logs` | Planned (V0.2) | Yes | Learning session records |
-| `follower_snapshots` | Planned (V0.3) | Yes | Historical follower counts |
+- **Prisma as source of truth** - Schema defined in `prisma/schema.prisma`
+- **Supabase for Auth** - User trigger syncs `auth.users` → `public.users`
+- **Type-safe queries** - Generated TypeScript types from Prisma
+- **90-minute blocks** - Tasks default to 90-minute time blocks
 
 ---
 
-## Core Types
+## Schema Status
 
-```sql
--- Enable UUID extension
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
--- Create custom enum types
-CREATE TYPE pillar_type AS ENUM ('redesign', 'build', 'workflow', 'insight');
-CREATE TYPE status_type AS ENUM ('idea', 'in_progress', 'ready', 'scheduled', 'posted');
-CREATE TYPE feed_source_type AS ENUM ('rss', 'x_account');
-CREATE TYPE feed_category AS ENUM ('ai', 'design', 'dev', 'indie', 'general');
-```
+| Model | Phase | Status |
+|-------|-------|--------|
+| `User` | MVP | Complete |
+| `Task` | MVP | Complete |
+| `Goal` | MVP | Complete |
+| `Client` | MVP | Complete |
+| `Project` | MVP | Complete |
+| `Opportunity` | MVP | Complete |
+| `Asset` | MVP | Complete |
+| `LibraryItem` | Phase 2 | Schema ready |
+| `Workout` | Phase 4 | Schema ready |
+| `DailyCheckIn` | Phase 4 | Schema ready |
+| `Transaction` | Phase 4 | Schema ready |
+| `Contact` | Phase 5 | Schema ready |
+| `SocialPost` | Phase 5 | Schema ready |
+| `FeedSource` | Phase 3 | Schema ready |
+| `FeedItem` | Phase 3 | Schema ready |
+| `AITool` | Phase 3 | Schema ready |
 
 ---
 
-## Tables
+## Enums
 
-### users
+```prisma
+enum TaskCategory {
+  DESIGN
+  CODE
+  CLIENT
+  LEARNING
+  FITNESS
+  ADMIN
+  SAAS
+  NETWORKING
+}
 
-Extended user profile linked to Supabase auth.
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  BLOCKED
+  DONE
+}
 
-```sql
-CREATE TABLE users (
-  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-  email TEXT UNIQUE NOT NULL,
-  x_username TEXT,
-  x_access_token TEXT,      -- Encrypted
-  x_refresh_token TEXT,     -- Encrypted
-  x_token_expires_at TIMESTAMPTZ,
-  settings JSONB DEFAULT '{}',
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
+enum EnergyLevel {
+  DEEP_WORK      // High focus tasks
+  MODERATE       // Normal tasks
+  LIGHT          // Low energy tasks
+}
 
--- Indexes
-CREATE INDEX idx_users_email ON users(email);
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
 
--- RLS
-ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+enum ClientStatus {
+  ACTIVE
+  PAUSED
+  COMPLETED
+  CHURNED
+}
 
-CREATE POLICY "Users can view own profile"
-  ON users FOR SELECT
-  USING (auth.uid() = id);
+enum HealthScore {
+  GREEN          // Happy, engaged
+  YELLOW         // Needs attention
+  RED            // At risk
+}
 
-CREATE POLICY "Users can update own profile"
-  ON users FOR UPDATE
-  USING (auth.uid() = id);
-```
+enum PaymentStatus {
+  CURRENT
+  PENDING
+  OVERDUE
+}
 
-### content_ideas
+enum ProjectStatus {
+  PLANNING
+  DESIGN
+  DEVELOPMENT
+  REVIEW
+  LAUNCHED
+}
 
-The core content idea bank.
-
-```sql
-CREATE TABLE content_ideas (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  title TEXT NOT NULL,
-  body TEXT,
-  pillar pillar_type NOT NULL,
-  status status_type DEFAULT 'idea',
-  media_urls TEXT[],
-  scheduled_for TIMESTAMPTZ,
-  posted_at TIMESTAMPTZ,
-  x_post_id TEXT,
-  sort_order INTEGER DEFAULT 0,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW(),
-  deleted_at TIMESTAMPTZ,
-
-  -- Constraints
-  CONSTRAINT valid_schedule CHECK (
-    (status != 'scheduled') OR (scheduled_for IS NOT NULL)
-  ),
-  CONSTRAINT valid_posted CHECK (
-    (status != 'posted') OR (posted_at IS NOT NULL)
-  )
-);
-
--- Indexes
-CREATE INDEX idx_ideas_user_id ON content_ideas(user_id);
-CREATE INDEX idx_ideas_status ON content_ideas(status) WHERE deleted_at IS NULL;
-CREATE INDEX idx_ideas_pillar ON content_ideas(pillar) WHERE deleted_at IS NULL;
-CREATE INDEX idx_ideas_scheduled ON content_ideas(scheduled_for)
-  WHERE status = 'scheduled' AND deleted_at IS NULL;
-CREATE INDEX idx_ideas_sort ON content_ideas(user_id, sort_order)
-  WHERE deleted_at IS NULL;
-
--- RLS
-ALTER TABLE content_ideas ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Users can view own ideas"
-  ON content_ideas FOR SELECT
-  USING (auth.uid() = user_id);
-
-CREATE POLICY "Users can insert own ideas"
-  ON content_ideas FOR INSERT
-  WITH CHECK (auth.uid() = user_id);
-
-CREATE POLICY "Users can update own ideas"
-  ON content_ideas FOR UPDATE
-  USING (auth.uid() = user_id);
-
-CREATE POLICY "Users can delete own ideas"
-  ON content_ideas FOR DELETE
-  USING (auth.uid() = user_id);
-```
-
-### post_metrics (V0.3)
-
-X post performance data.
-
-```sql
-CREATE TABLE post_metrics (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  idea_id UUID NOT NULL REFERENCES content_ideas(id) ON DELETE CASCADE,
-  impressions INTEGER DEFAULT 0,
-  likes INTEGER DEFAULT 0,
-  replies INTEGER DEFAULT 0,
-  retweets INTEGER DEFAULT 0,
-  bookmarks INTEGER DEFAULT 0,
-  quotes INTEGER DEFAULT 0,
-  fetched_at TIMESTAMPTZ DEFAULT NOW(),
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- Indexes
-CREATE INDEX idx_metrics_idea_id ON post_metrics(idea_id);
-CREATE INDEX idx_metrics_fetched ON post_metrics(fetched_at DESC);
-
--- RLS
-ALTER TABLE post_metrics ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Users can view metrics for own ideas"
-  ON post_metrics FOR SELECT
-  USING (
-    EXISTS (
-      SELECT 1 FROM content_ideas
-      WHERE content_ideas.id = post_metrics.idea_id
-      AND content_ideas.user_id = auth.uid()
-    )
-  );
-```
-
-### feed_sources (V0.2)
-
-RSS feeds and X accounts to follow.
-
-```sql
-CREATE TABLE feed_sources (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  name TEXT NOT NULL,
-  type feed_source_type NOT NULL,
-  url TEXT NOT NULL,
-  category feed_category DEFAULT 'general',
-  is_active BOOLEAN DEFAULT true,
-  last_fetched_at TIMESTAMPTZ,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- Indexes
-CREATE INDEX idx_sources_user_id ON feed_sources(user_id);
-CREATE INDEX idx_sources_active ON feed_sources(is_active) WHERE is_active = true;
-
--- RLS
-ALTER TABLE feed_sources ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Users can manage own sources"
-  ON feed_sources FOR ALL
-  USING (auth.uid() = user_id);
-```
-
-### feed_items (V0.2)
-
-Ingested content from feed sources.
-
-```sql
-CREATE TABLE feed_items (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  source_id UUID NOT NULL REFERENCES feed_sources(id) ON DELETE CASCADE,
-  external_id TEXT,          -- Original ID from source
-  title TEXT,
-  content TEXT,
-  url TEXT,
-  image_url TEXT,
-  author TEXT,
-  published_at TIMESTAMPTZ,
-  is_read BOOLEAN DEFAULT false,
-  is_saved BOOLEAN DEFAULT false,
-  is_dismissed BOOLEAN DEFAULT false,
-  converted_to_idea_id UUID REFERENCES content_ideas(id),
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-
-  UNIQUE(source_id, external_id)
-);
-
--- Indexes
-CREATE INDEX idx_items_source_id ON feed_items(source_id);
-CREATE INDEX idx_items_unread ON feed_items(is_read, created_at DESC)
-  WHERE is_read = false AND is_dismissed = false;
-CREATE INDEX idx_items_saved ON feed_items(is_saved) WHERE is_saved = true;
-
--- RLS
-ALTER TABLE feed_items ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Users can view items from own sources"
-  ON feed_items FOR SELECT
-  USING (
-    EXISTS (
-      SELECT 1 FROM feed_sources
-      WHERE feed_sources.id = feed_items.source_id
-      AND feed_sources.user_id = auth.uid()
-    )
-  );
-
-CREATE POLICY "Users can update items from own sources"
-  ON feed_items FOR UPDATE
-  USING (
-    EXISTS (
-      SELECT 1 FROM feed_sources
-      WHERE feed_sources.id = feed_items.source_id
-      AND feed_sources.user_id = auth.uid()
-    )
-  );
-```
-
-### learning_logs (V0.2)
-
-Learning session records.
-
-```sql
-CREATE TABLE learning_logs (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  date DATE NOT NULL,
-  topic TEXT NOT NULL,
-  duration_minutes INTEGER,
-  notes TEXT,
-  tags TEXT[],
-  resource_urls TEXT[],
-  converted_to_idea_id UUID REFERENCES content_ideas(id),
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- Indexes
-CREATE INDEX idx_logs_user_id ON learning_logs(user_id);
-CREATE INDEX idx_logs_date ON learning_logs(date DESC);
-
--- RLS
-ALTER TABLE learning_logs ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Users can manage own logs"
-  ON learning_logs FOR ALL
-  USING (auth.uid() = user_id);
-```
-
-### follower_snapshots (V0.3)
-
-Historical follower counts for growth tracking.
-
-```sql
-CREATE TABLE follower_snapshots (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  count INTEGER NOT NULL,
-  recorded_at DATE NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-
-  UNIQUE(user_id, recorded_at)
-);
-
--- Indexes
-CREATE INDEX idx_snapshots_user_date ON follower_snapshots(user_id, recorded_at DESC);
-
--- RLS
-ALTER TABLE follower_snapshots ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Users can manage own snapshots"
-  ON follower_snapshots FOR ALL
-  USING (auth.uid() = user_id);
+enum GoalType {
+  DAILY
+  WEEKLY
+  MONTHLY
+  YEARLY
+}
 ```
 
 ---
 
-## Triggers
+## Core Models
 
-### Auto-update updated_at
+### User
 
-```sql
-CREATE OR REPLACE FUNCTION update_updated_at()
-RETURNS TRIGGER AS $$
-BEGIN
-  NEW.updated_at = NOW();
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
+```prisma
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String?
+  avatarUrl String?  @map("avatar_url")
+  preferences Json   @default("{}")
+  timezone  String   @default("America/New_York")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
--- Apply to tables with updated_at
-CREATE TRIGGER set_updated_at
-  BEFORE UPDATE ON users
-  FOR EACH ROW
-  EXECUTE FUNCTION update_updated_at();
+  // Relations
+  tasks         Task[]
+  goals         Goal[]
+  clients       Client[]
+  // ... other relations
 
-CREATE TRIGGER set_updated_at
-  BEFORE UPDATE ON content_ideas
-  FOR EACH ROW
-  EXECUTE FUNCTION update_updated_at();
+  @@map("users")
+}
+```
 
-CREATE TRIGGER set_updated_at
-  BEFORE UPDATE ON feed_sources
-  FOR EACH ROW
-  EXECUTE FUNCTION update_updated_at();
+### Task
 
-CREATE TRIGGER set_updated_at
-  BEFORE UPDATE ON learning_logs
-  FOR EACH ROW
-  EXECUTE FUNCTION update_updated_at();
+The core productivity unit - 90-minute time blocks.
+
+```prisma
+model Task {
+  id               String       @id @default(uuid())
+  userId           String       @map("user_id")
+  projectId        String?      @map("project_id")
+  title            String
+  description      String?
+  category         TaskCategory
+  priority         Priority     @default(MEDIUM)
+  status           TaskStatus   @default(TODO)
+  scheduledDate    DateTime?    @map("scheduled_date") @db.Date
+  scheduledTime    String?      @map("scheduled_time") // "09:00"
+  timeBlockMinutes Int          @default(90) @map("time_block_minutes")
+  energyLevel      EnergyLevel  @default(MODERATE) @map("energy_level")
+  linkedAssets     String[]     @default([]) @map("linked_assets")
+  completedAt      DateTime?    @map("completed_at")
+  createdAt        DateTime     @default(now()) @map("created_at")
+  updatedAt        DateTime     @updatedAt @map("updated_at")
+
+  user    User     @relation(...)
+  project Project? @relation(...)
+
+  @@index([userId])
+  @@index([scheduledDate])
+  @@map("tasks")
+}
+```
+
+### Goal
+
+```prisma
+model Goal {
+  id           String    @id @default(uuid())
+  userId       String    @map("user_id")
+  title        String
+  description  String?
+  type         GoalType  // DAILY, WEEKLY, MONTHLY, YEARLY
+  targetValue  Int?      @map("target_value")
+  currentValue Int       @default(0) @map("current_value")
+  dueDate      DateTime? @map("due_date")
+  completedAt  DateTime? @map("completed_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  user User @relation(...)
+
+  @@map("goals")
+}
 ```
 
 ---
 
-## Functions
+## Client CRM Models
 
-### Soft delete ideas
+### Client
 
-```sql
-CREATE OR REPLACE FUNCTION soft_delete_idea(idea_id UUID)
-RETURNS VOID AS $$
-BEGIN
-  UPDATE content_ideas
-  SET deleted_at = NOW()
-  WHERE id = idea_id
-  AND user_id = auth.uid();
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+```prisma
+model Client {
+  id              String        @id @default(uuid())
+  userId          String        @map("user_id")
+  name            String
+  email           String?
+  phone           String?
+  company         String?
+  industry        String?
+  websiteUrl      String?       @map("website_url")
+  githubUrl       String?       @map("github_url")
+  vercelUrl       String?       @map("vercel_url")
+  figmaUrl        String?       @map("figma_url")
+  credentials     String?       // Encrypted
+  status          ClientStatus  @default(ACTIVE)
+  healthScore     HealthScore   @default(GREEN) @map("health_score")
+  contractValue   Decimal?      @map("contract_value") @db.Decimal(10, 2)
+  monthlyRetainer Decimal?      @map("monthly_retainer") @db.Decimal(10, 2)
+  paymentStatus   PaymentStatus @default(CURRENT) @map("payment_status")
+  lastContacted   DateTime?     @map("last_contacted")
+  nextFollowup    DateTime?     @map("next_followup")
+  referredBy      String?       @map("referred_by")
+  notes           String?
+  metadata        Json          @default("{}")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+
+  user          User          @relation(...)
+  projects      Project[]
+  assets        Asset[]
+  opportunities Opportunity[]
+
+  @@index([userId])
+  @@index([healthScore])
+  @@map("clients")
+}
 ```
 
-### Get scheduled posts for cron
+### Project
 
-```sql
-CREATE OR REPLACE FUNCTION get_due_scheduled_posts()
-RETURNS TABLE (
-  id UUID,
-  user_id UUID,
-  title TEXT,
-  body TEXT,
-  media_urls TEXT[],
-  scheduled_for TIMESTAMPTZ
-) AS $$
-BEGIN
-  RETURN QUERY
-  SELECT
-    ci.id,
-    ci.user_id,
-    ci.title,
-    ci.body,
-    ci.media_urls,
-    ci.scheduled_for
-  FROM content_ideas ci
-  WHERE ci.status = 'scheduled'
-  AND ci.scheduled_for <= NOW()
-  AND ci.deleted_at IS NULL
-  ORDER BY ci.scheduled_for ASC;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+```prisma
+model Project {
+  id            String        @id @default(uuid())
+  clientId      String        @map("client_id")
+  name          String
+  description   String?
+  type          ProjectType   @default(WEBSITE)
+  status        ProjectStatus @default(PLANNING)
+  priority      Priority      @default(MEDIUM)
+  startDate     DateTime?     @map("start_date") @db.Date
+  dueDate       DateTime?     @map("due_date") @db.Date
+  budget        Decimal?      @db.Decimal(10, 2)
+  paidAmount    Decimal       @default(0) @map("paid_amount") @db.Decimal(10, 2)
+  repositoryUrl String?       @map("repository_url")
+  stagingUrl    String?       @map("staging_url")
+  productionUrl String?       @map("production_url")
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+
+  client Client  @relation(...)
+  tasks  Task[]
+  assets Asset[]
+
+  @@index([clientId])
+  @@index([status])
+  @@map("projects")
+}
+```
+
+### Opportunity
+
+AI-generated upsell opportunities.
+
+```prisma
+model Opportunity {
+  id          String   @id @default(uuid())
+  clientId    String   @map("client_id")
+  title       String
+  description String?
+  value       Decimal? @db.Decimal(10, 2)
+  isAiGenerated Boolean @default(false) @map("is_ai_generated")
+  isDismissed Boolean  @default(false) @map("is_dismissed")
+  isConverted Boolean  @default(false) @map("is_converted")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  client Client @relation(...)
+
+  @@map("opportunities")
+}
 ```
 
 ---
 
-## Storage Buckets
+## Asset Model
 
-### media
+```prisma
+model Asset {
+  id            String    @id @default(uuid())
+  userId        String    @map("user_id")
+  projectId     String?   @map("project_id")
+  clientId      String?   @map("client_id")
+  type          AssetType
+  category      String?   // screenshot, mockup, etc.
+  name          String
+  storagePath   String    @map("storage_path")
+  url           String
+  thumbnailUrl  String?   @map("thumbnail_url")
+  fileSize      Int       @map("file_size")
+  mimeType      String    @map("mime_type")
+  tags          String[]  @default([])
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
 
-For post images and attachments.
-
-```sql
--- Create bucket (done via Supabase dashboard or API)
-INSERT INTO storage.buckets (id, name, public)
-VALUES ('media', 'media', false);
-
--- RLS policies for storage
-CREATE POLICY "Users can upload own media"
-  ON storage.objects FOR INSERT
-  WITH CHECK (
-    bucket_id = 'media'
-    AND auth.uid()::text = (storage.foldername(name))[1]
-  );
-
-CREATE POLICY "Users can view own media"
-  ON storage.objects FOR SELECT
-  USING (
-    bucket_id = 'media'
-    AND auth.uid()::text = (storage.foldername(name))[1]
-  );
-
-CREATE POLICY "Users can delete own media"
-  ON storage.objects FOR DELETE
-  USING (
-    bucket_id = 'media'
-    AND auth.uid()::text = (storage.foldername(name))[1]
-  );
+  @@map("assets")
+}
 ```
 
 ---
 
-## Migration Strategy
-
-### File Naming Convention
-
-```
-supabase/migrations/
-├── 20260126000000_create_types.sql
-├── 20260126000001_create_users.sql
-├── 20260126000002_create_content_ideas.sql
-├── 20260126000003_create_triggers.sql
-├── 20260126000004_create_functions.sql
-└── 20260126000005_create_storage.sql
-```
-
-### Commands
+## Commands
 
 ```bash
-# Generate types after migration
-npm run db:types
+# Generate Prisma client
+npx prisma generate
 
-# Push migrations to database
-npm run db:migrate
+# Push schema to database
+npx prisma db push
 
-# Reset database (development only)
-npm run db:reset
+# Open Prisma Studio
+npx prisma studio
+
+# Create migration
+npx prisma migrate dev --name <name>
+
+# Deploy migrations
+npx prisma migrate deploy
+```
+
+---
+
+## User Trigger
+
+When a user signs up via Supabase Auth, a trigger creates the corresponding `public.users` record:
+
+```sql
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO public.users (id, email, name, avatar_url, preferences, timezone, created_at, updated_at)
+  VALUES (
+    NEW.id,
+    NEW.email,
+    COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.raw_user_meta_data->>'name'),
+    NEW.raw_user_meta_data->>'avatar_url',
+    '{}',
+    'America/New_York',
+    NOW(),
+    NOW()
+  );
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 ```
 
 ---
 
 ## Query Examples
 
-### Get ideas by pillar
+### Get today's tasks
 
-```sql
-SELECT * FROM content_ideas
-WHERE user_id = auth.uid()
-AND pillar = 'build'
-AND deleted_at IS NULL
-ORDER BY sort_order ASC;
+```typescript
+const tasks = await prisma.task.findMany({
+  where: {
+    userId: user.id,
+    scheduledDate: new Date(),
+  },
+  orderBy: { scheduledTime: 'asc' },
+})
 ```
 
-### Get ready ideas for scheduling
+### Get clients by health score
 
-```sql
-SELECT * FROM content_ideas
-WHERE user_id = auth.uid()
-AND status = 'ready'
-AND deleted_at IS NULL
-ORDER BY created_at DESC;
+```typescript
+const atRiskClients = await prisma.client.findMany({
+  where: {
+    userId: user.id,
+    healthScore: 'RED',
+  },
+  include: { projects: true },
+})
 ```
 
-### Get this week's scheduled posts
+### Get project pipeline
 
-```sql
-SELECT * FROM content_ideas
-WHERE user_id = auth.uid()
-AND status = 'scheduled'
-AND scheduled_for >= date_trunc('week', NOW())
-AND scheduled_for < date_trunc('week', NOW()) + INTERVAL '1 week'
-AND deleted_at IS NULL
-ORDER BY scheduled_for ASC;
-```
-
-### Get pillar counts
-
-```sql
-SELECT pillar, COUNT(*) as count
-FROM content_ideas
-WHERE user_id = auth.uid()
-AND deleted_at IS NULL
-GROUP BY pillar;
+```typescript
+const projects = await prisma.project.findMany({
+  where: {
+    client: { userId: user.id },
+  },
+  include: { client: true },
+  orderBy: { status: 'asc' },
+})
 ```
 
 ---
 
-_Last updated: 2026-01-26_
+_Last updated: January 2026_

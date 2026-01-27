@@ -6,257 +6,166 @@
 
 ## Overview
 
-The MVP consists of 6 phases that deliver a working content command center:
+The MVP focuses on two core modules:
 
-1. **Foundation** - Project setup, auth, basic CRUD
-2. **Idea Bank** - Content idea management
-3. **Composer** - Post writing and preview
-4. **X Integration** - Posting to X
-5. **Calendar** - Visual scheduling
-6. **Dashboard** - Home base overview
+1. **Command Center** - Daily productivity with 90-minute blocks
+2. **Client CRM** - Client management with health scores
 
 ---
 
-## Pre-Phase: Project Hardening (Complete)
+## Phase 0: Infrastructure (Complete)
 
-**Goal**: Establish production-grade project structure and documentation
+**Goal**: Set up Prisma, new route structure, and core components
+
+### Prisma Setup
+- [x] Install Prisma packages (`prisma`, `@prisma/client`, `@prisma/adapter-pg`)
+- [x] Create `prisma/schema.prisma` with all 16+ models
+- [x] Create `prisma.config.ts` for CLI configuration
+- [x] Create Prisma client singleton (`src/lib/prisma/client.ts`)
+- [x] Push schema to database (`npx prisma db push`)
+- [x] Fix user creation trigger for new schema
+
+### Route Structure
+- [x] Create `/command/tasks` route
+- [x] Create `/command/calendar` route
+- [x] Create `/command/goals` route
+- [x] Create `/clients` route
+- [x] Create `/clients/[id]` route
+- [x] Create `/clients/new` route
+- [x] Create `/projects` route
+- [x] Create `/projects/[id]` route
+- [x] Update dashboard home to Command Center
+
+### API Routes
+- [x] Create `/api/tasks` route (GET, POST)
+- [x] Create `/api/clients` route (GET, POST)
+- [x] Create `/api/projects` route (GET, POST)
+- [x] Create `/api/goals` route (GET, POST)
+
+### Navigation
+- [x] Update navigation config with new structure
+- [x] Add "Coming Soon" items for future modules
+- [x] Group navigation (Main, Work, Coming Soon)
+
+### Core Components
+- [x] Create `TimeBlock` component
+- [x] Create `TaskCard` component
+- [x] Create `TaskForm` component
+- [x] Create `DailyTimeline` component
+- [x] Create `GoalsPanel` component
+- [x] Create `HealthScoreBadge` component
+- [x] Create `ClientCard` component
+- [x] Create `ProjectKanban` component
 
 ### Documentation
-- [x] Create `/docs` folder structure
-- [x] Write `architecture.md` with full system design
-- [x] Write `changelog.md` with version tracking
-- [x] Write `mvp-checklist.md` (this file)
-- [x] Write `future-features.md` with backlog
-- [x] Write `security.md` with security practices
-- [x] Write `deployment.md` with setup guide
+- [x] Update SPEC.md with ACTUAL-SPEC content
+- [x] Update CLAUDE.md with new architecture
+- [x] Update all docs/*.md files
 
-### Project Structure
-- [x] Migrate to `src/` directory structure
-- [x] Create route groups (`(auth)`, `(dashboard)`)
-- [x] Set up placeholder pages for all routes
-- [x] Create global error, loading, not-found pages
-- [x] Update `tsconfig.json` for `src/` paths
-- [x] Create `vercel.json` for cron configuration
-
-### Configuration
-- [x] Create `.env.example` with all variables
-- [x] Create `src/config/pillars.ts`
-- [x] Create `src/config/site.ts`
-- [x] Create `src/config/navigation.ts`
-- [x] Create `src/constants/index.ts`
-
-### Utilities
-- [x] Create `cn()` utility (clsx + tailwind-merge)
-- [x] Create `apiResponse()` utility
-- [x] Create date formatting utilities
-- [x] Set up Zod validation schemas
-- [x] Create TypeScript type definitions
-
-### Dependencies
-- [x] Install Supabase packages
-- [x] Install React Query
-- [x] Install Zustand
-- [x] Install Zod
-- [x] Install date-fns, clsx, tailwind-merge
-- [x] Install dev tools (vitest, playwright, supabase CLI)
-
-### Verification
-- [x] `npm run build` passes
-- [x] `npm run typecheck` passes
-- [x] `npm run lint` passes (warnings OK)
-- [x] Update `CLAUDE.md` with patterns
+### Cleanup
+- [x] Remove old migrations
+- [x] Remove old types (idea.types.ts, etc.)
+- [x] Remove old routes (/ideas, /compose, /feed, /learn)
+- [x] Drop old database tables (content_ideas, etc.)
 
 ---
 
-## Phase 1: Foundation
+## Phase 1: Command Center Core
 
-**Goal**: Project setup, authentication, basic CRUD operations
+**Goal**: Functional daily productivity system
 
-**Status**: In Progress
+### Task Management
+- [ ] Wire up TaskForm to create tasks via API
+- [ ] Display tasks in DailyTimeline by scheduled time
+- [ ] Implement task status transitions (TODO → IN_PROGRESS → DONE)
+- [ ] Add task category filtering
+- [ ] Implement drag-and-drop reordering
+- [ ] Add task completion (mark done, record completedAt)
 
-### Setup
-- [ ] Set up Supabase project (cloud)
-- [x] Configure environment variables (`.env.example` created)
-- [ ] Create database schema with RLS policies
-- [ ] Generate TypeScript types from Supabase
-- [x] Install core dependencies (Supabase, React Query, Zustand, Zod)
+### Time Blocking
+- [ ] Display 90-minute blocks on timeline
+- [ ] Allow scheduling tasks to specific time slots
+- [ ] Show energy level indicators
+- [ ] Support different block durations (45, 90, 120 min)
 
-### Authentication
-- [ ] Configure Supabase Auth
-- [x] Create login page (`/login`) - placeholder created
-- [ ] Implement auth callback handler
-- [ ] Add auth middleware for protected routes
-- [ ] Create auth hook (`use-auth.ts`)
+### Goals
+- [ ] Create daily goals
+- [ ] Track goal progress (currentValue/targetValue)
+- [ ] Display goals in sidebar widget
+- [ ] Mark goals complete
 
-### App Shell
-- [x] Build root layout with dark theme
-- [x] Create sidebar navigation component (placeholder)
-- [ ] Create header component
-- [x] Create dashboard layout wrapper
-- [x] Add loading and error states
-
-### Foundation Utilities
-- [x] Set up Zod validation schemas
-- [x] Create API response utility
-- [x] Create `cn()` utility (clsx + tailwind-merge)
-- [ ] Configure shadcn/ui components
-
----
-
-## Phase 2: Idea Bank
-
-**Goal**: Full content idea management with filtering and organization
-
-**Status**: Not Started
-
-### API Layer
-- [ ] Create ideas API route (`GET`, `POST`)
-- [ ] Create ideas/:id API route (`GET`, `PUT`, `DELETE`)
-- [x] Add Zod validation for idea operations
-- [ ] Implement soft delete
-
-### React Query Integration
-- [ ] Create `use-ideas.ts` hook
-- [ ] Implement list query with filters
-- [ ] Implement create mutation
-- [ ] Implement update mutation
-- [ ] Implement delete mutation
-
-### UI Components
-- [ ] Create `IdeaCard` component
-- [ ] Create `IdeaList` component
-- [ ] Create `IdeaForm` component (modal)
-- [ ] Create `IdeaFilters` component
-- [ ] Create `QuickAdd` component
-
-### Features
-- [x] Idea bank page with filtering (pillar, status) - placeholder UI
-- [ ] Create/edit idea modal
-- [ ] Status transitions (idea → in progress → ready)
-- [x] Pillar color coding (dots/badges) - implemented in CSS
-- [ ] Drag-to-reorder within lists
-- [x] Empty states - placeholder created
-
----
-
-## Phase 3: Composer
-
-**Goal**: Write, preview, and prepare posts for X
-
-**Status**: Not Started
-
-### API Layer
-- [ ] Create media upload endpoint
-- [ ] Configure Supabase Storage bucket
-- [ ] Handle image optimization
-
-### UI Components
-- [ ] Create `PostComposer` component
-- [ ] Create `CharacterCount` component
-- [ ] Create `MediaUpload` component
-- [ ] Create `PostPreview` component
-- [ ] Create `ThreadComposer` component
-
-### Features
-- [x] Composer page - placeholder UI created
-- [ ] Character count with visual feedback (280 limit)
-- [ ] Image upload to Supabase Storage
-- [ ] Preview pane (how it'll look on X)
-- [ ] Save as draft functionality
-- [ ] Thread composer (multiple tweets)
-- [ ] Auto-save drafts to Zustand store
-
----
-
-## Phase 4: X Integration
-
-**Goal**: Connect to X and post content
-
-**Status**: Not Started
-
-### OAuth Flow
-- [ ] Create X OAuth initiation endpoint
-- [ ] Create X OAuth callback handler
-- [ ] Implement token encryption (AES-256-GCM)
-- [ ] Store encrypted tokens in users table
-- [ ] Add token refresh logic
-
-### Posting
-- [ ] Create X API wrapper (`lib/x-api/`)
-- [ ] Implement "Post Now" functionality
-- [ ] Handle media upload to X
-- [ ] Update idea status to "posted"
-- [ ] Store `x_post_id` on idea record
-
-### Scheduling
-- [ ] Add `scheduled_for` field handling
-- [ ] Create Vercel Cron job (`/api/cron/post-scheduled`)
-- [ ] Query for due posts (scheduled_for <= now)
-- [ ] Execute posting for each due post
-- [ ] Error handling and retry logic
-- [x] Cron authentication (CRON_SECRET) - configured in vercel.json
-
----
-
-## Phase 5: Calendar
-
-**Goal**: Visual scheduling interface
-
-**Status**: Not Started
-
-### UI Components
-- [ ] Create `WeekView` component
-- [ ] Create `TimeSlot` component
-- [ ] Create `DraggableIdea` component
-- [ ] Create `CalendarHeader` component
-
-### Features
-- [x] Calendar page with week view - placeholder UI created
-- [ ] Display scheduled posts in time slots
-- [x] Three slots per day (morning, afternoon, evening) - UI structure
-- [ ] Drag from "Ready" queue to calendar
-- [ ] Click to edit scheduled time
-- [x] Visual indicator of pillar type - CSS configured
+### Calendar View
+- [ ] Week view with days as columns
+- [ ] Drag tasks to different days
+- [ ] Show task counts per day
 - [ ] Navigate between weeks
-- [ ] Month view (stretch goal)
 
 ---
 
-## Phase 6: Dashboard
+## Phase 2: Client CRM Core
 
-**Goal**: Home base that surfaces what matters
+**Goal**: Functional client management system
 
-**Status**: Not Started
+### Client Management
+- [ ] Create new clients via form
+- [ ] Edit client details
+- [ ] Display client list with health score badges
+- [ ] Filter clients by status (Active, Paused, etc.)
+- [ ] Filter clients by health score
 
-### UI Components
-- [ ] Create `TodaySchedule` component
-- [ ] Create `StreakCounter` component
-- [ ] Create `PillarStats` component
-- [ ] Create `ReadyQueue` component
+### Project Pipeline
+- [ ] Create projects linked to clients
+- [ ] Kanban board with project statuses
+- [ ] Drag projects between columns
+- [ ] Project detail view
 
-### Features
-- [x] Dashboard home page - placeholder UI created
-- [x] Today's schedule widget (3 time slots) - UI structure
-- [ ] Posting streak counter (calculated from history)
-- [x] Ideas summary by pillar (counts) - UI structure
-- [ ] "Ready to post" queue (top 5)
-- [x] Quick-add button - placeholder
-- [ ] Link to full views
+### Health Scores
+- [ ] Manual health score updates
+- [ ] Visual indicators (GREEN/YELLOW/RED)
+- [ ] Health score history (stretch)
+
+### Client Details
+- [ ] Quick links (website, GitHub, Figma, Vercel)
+- [ ] Encrypted credentials storage
+- [ ] Notes and metadata
+- [ ] Follow-up reminders
+
+---
+
+## Phase 3: Integration & Polish
+
+**Goal**: Connect modules and add finishing touches
+
+### Cross-Module Integration
+- [ ] Link tasks to projects
+- [ ] Show client tasks in client detail
+- [ ] Project tasks view
+
+### UI Polish
+- [ ] Loading states for all data
+- [ ] Error handling and display
+- [ ] Empty states with CTAs
+- [ ] Toast notifications
+
+### Data Validation
+- [ ] Zod schemas for all forms
+- [ ] Server-side validation
+- [ ] Client-side validation feedback
 
 ---
 
 ## MVP Complete Criteria
 
-When all phases are complete, the app should:
+When complete, the app should:
 
-- [ ] Allow user login via Supabase Auth
-- [ ] Capture ideas by pillar
-- [ ] Write and preview posts
-- [ ] Post directly to X
-- [ ] Schedule posts for future times
-- [ ] Display posts on calendar
-- [ ] Show dashboard overview
-- [ ] Be usable daily by the developer
+- [x] Allow user login via Supabase Auth
+- [ ] Create and schedule tasks in 90-minute blocks
+- [ ] View daily timeline with tasks
+- [ ] Track daily/weekly goals
+- [ ] Manage clients with health scores
+- [ ] Track projects in pipeline view
+- [ ] Navigate between all MVP routes
+- [ ] Be usable daily
 
 ---
 
@@ -264,21 +173,16 @@ When all phases are complete, the app should:
 
 | Phase | Status | Started | Completed |
 |-------|--------|---------|-----------|
-| Pre-Phase: Hardening | Complete | 2026-01-26 | 2026-01-26 |
-| Phase 1: Foundation | In Progress | 2026-01-26 | - |
-| Phase 2: Idea Bank | Not Started | - | - |
-| Phase 3: Composer | Not Started | - | - |
-| Phase 4: X Integration | Not Started | - | - |
-| Phase 5: Calendar | Not Started | - | - |
-| Phase 6: Dashboard | Not Started | - | - |
+| Phase 0: Infrastructure | Complete | 2026-01-26 | 2026-01-26 |
+| Phase 1: Command Center | In Progress | 2026-01-26 | - |
+| Phase 2: Client CRM | Not Started | - | - |
+| Phase 3: Integration | Not Started | - | - |
 
 ---
 
 ## Notes
 
-- **2026-01-26**: Completed project hardening. All placeholder pages built, documentation complete, dependencies installed. Ready for Supabase setup.
-- Each phase generates at least one showcase post
-- Test each phase before moving to the next
+- **2026-01-26**: Completed infrastructure pivot. Prisma schema with 16+ models, new route structure, core components built, user creation trigger fixed.
 - Focus on functionality over polish in MVP
 - Document any blockers or decisions made
 
@@ -286,11 +190,10 @@ When all phases are complete, the app should:
 
 ## Next Steps
 
-1. Set up Supabase project (create account/project if needed)
-2. Create database schema with migrations
-3. Configure Supabase Auth
-4. Initialize shadcn/ui for component library
-5. Build functional login flow
+1. Wire up TaskForm to create tasks via API
+2. Fetch and display tasks in DailyTimeline
+3. Implement task status transitions
+4. Add task completion functionality
 
 ---
 

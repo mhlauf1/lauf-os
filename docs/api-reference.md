@@ -6,7 +6,7 @@
 
 ## Overview
 
-All API routes follow RESTful conventions and return consistent JSON responses.
+All API routes use Prisma for database access and return consistent JSON responses.
 
 ### Base URL
 
@@ -14,8 +14,6 @@ All API routes follow RESTful conventions and return consistent JSON responses.
 - Production: `https://your-app.vercel.app/api`
 
 ### Response Format
-
-All endpoints return this structure:
 
 ```typescript
 interface ApiResponse<T> {
@@ -27,24 +25,23 @@ interface ApiResponse<T> {
 
 ### Authentication
 
-Most endpoints require authentication via Supabase session cookies. Unauthenticated requests receive a `401 Unauthorized` response.
+All endpoints require authentication via Supabase session cookies. Unauthenticated requests receive `401 Unauthorized`.
 
 ---
 
-## Endpoints
+## Tasks API
 
-### Ideas
+### GET /api/tasks
 
-#### GET /api/ideas
-
-Get all ideas for the authenticated user.
+Get all tasks for the authenticated user.
 
 **Query Parameters:**
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `pillar` | string | Filter by pillar (redesign, build, workflow, insight) |
-| `status` | string | Filter by status (idea, in_progress, ready, scheduled, posted) |
-| `search` | string | Search in title and body |
+| `date` | string | Filter by scheduled date (YYYY-MM-DD) |
+| `status` | string | Filter by status (TODO, IN_PROGRESS, BLOCKED, DONE) |
+| `category` | string | Filter by category (DESIGN, CODE, CLIENT, etc.) |
+| `projectId` | string | Filter by project |
 
 **Response:**
 ```json
@@ -52,235 +49,271 @@ Get all ideas for the authenticated user.
   "data": [
     {
       "id": "uuid",
-      "title": "SaaS pricing page redesign",
-      "body": "Before/after comparison...",
-      "pillar": "redesign",
-      "status": "ready",
-      "media_urls": [],
-      "scheduled_for": null,
-      "created_at": "2026-01-26T10:00:00Z"
+      "title": "Design homepage mockup",
+      "category": "DESIGN",
+      "status": "TODO",
+      "priority": "HIGH",
+      "scheduledDate": "2026-01-26",
+      "scheduledTime": "09:00",
+      "timeBlockMinutes": 90,
+      "energyLevel": "DEEP_WORK"
     }
   ],
   "error": null
 }
 ```
 
-**Status:** Planned (Phase 2)
+**Status:** Implemented
 
 ---
 
-#### POST /api/ideas
+### POST /api/tasks
 
-Create a new idea.
+Create a new task.
 
 **Request Body:**
 ```json
 {
-  "title": "My new idea",
-  "body": "Optional description",
-  "pillar": "build",
-  "status": "idea"
+  "title": "Design homepage mockup",
+  "category": "DESIGN",
+  "priority": "HIGH",
+  "scheduledDate": "2026-01-26",
+  "scheduledTime": "09:00",
+  "timeBlockMinutes": 90,
+  "energyLevel": "DEEP_WORK",
+  "projectId": "optional-project-id"
 }
 ```
-
-**Validation:** See `src/lib/validations/idea.schema.ts`
 
 **Response:**
 ```json
 {
   "data": {
     "id": "uuid",
-    "title": "My new idea",
+    "title": "Design homepage mockup",
     ...
   },
   "error": null,
-  "message": "Idea created"
+  "message": "Task created"
 }
 ```
 
-**Status:** Planned (Phase 2)
+**Status:** Implemented
 
 ---
 
-#### GET /api/ideas/[id]
+### PATCH /api/tasks/[id]
 
-Get a single idea by ID.
-
-**Response:**
-```json
-{
-  "data": {
-    "id": "uuid",
-    "title": "My idea",
-    ...
-  },
-  "error": null
-}
-```
-
-**Status:** Planned (Phase 2)
-
----
-
-#### PUT /api/ideas/[id]
-
-Update an existing idea.
+Update an existing task.
 
 **Request Body:**
 ```json
 {
-  "title": "Updated title",
-  "status": "ready"
+  "status": "IN_PROGRESS"
 }
 ```
 
-**Status:** Planned (Phase 2)
+**Status:** Planned
 
 ---
 
-#### DELETE /api/ideas/[id]
+### DELETE /api/tasks/[id]
 
-Soft delete an idea.
+Delete a task.
 
-**Response:**
-```json
-{
-  "data": null,
-  "error": null,
-  "message": "Idea deleted"
-}
-```
-
-**Status:** Planned (Phase 2)
+**Status:** Planned
 
 ---
 
-### X (Twitter) Integration
+## Clients API
 
-#### GET /api/x/auth
+### GET /api/clients
 
-Initiate X OAuth flow. Redirects to X authorization page.
-
-**Status:** Planned (Phase 4)
-
----
-
-#### GET /api/x/callback
-
-Handle X OAuth callback. Exchanges code for tokens, encrypts and stores them.
+Get all clients for the authenticated user.
 
 **Query Parameters:**
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `code` | string | Authorization code from X |
-| `state` | string | CSRF protection state |
+| `status` | string | Filter by status (ACTIVE, PAUSED, COMPLETED, CHURNED) |
+| `healthScore` | string | Filter by health score (GREEN, YELLOW, RED) |
 
-**Status:** Planned (Phase 4)
+**Response:**
+```json
+{
+  "data": [
+    {
+      "id": "uuid",
+      "name": "Acme Corp",
+      "company": "Acme Corporation",
+      "status": "ACTIVE",
+      "healthScore": "GREEN",
+      "contractValue": 5000,
+      "monthlyRetainer": 2000,
+      "lastContacted": "2026-01-20"
+    }
+  ],
+  "error": null
+}
+```
+
+**Status:** Implemented
 
 ---
 
-#### POST /api/x/post
+### POST /api/clients
 
-Post content to X.
+Create a new client.
 
 **Request Body:**
 ```json
 {
-  "idea_id": "uuid",
-  "text": "Post content...",
-  "media_ids": ["media_id_1"]
+  "name": "John Doe",
+  "email": "john@acme.com",
+  "company": "Acme Corporation",
+  "industry": "Technology",
+  "websiteUrl": "https://acme.com",
+  "contractValue": 5000,
+  "monthlyRetainer": 2000
 }
 ```
+
+**Status:** Implemented
+
+---
+
+### GET /api/clients/[id]
+
+Get a single client with projects.
 
 **Response:**
 ```json
 {
   "data": {
-    "x_post_id": "1234567890",
-    "url": "https://x.com/user/status/1234567890"
+    "id": "uuid",
+    "name": "John Doe",
+    "projects": [
+      {
+        "id": "uuid",
+        "name": "Website Redesign",
+        "status": "DEVELOPMENT"
+      }
+    ]
   },
   "error": null
 }
 ```
 
-**Status:** Planned (Phase 4)
+**Status:** Planned
 
 ---
 
-#### GET /api/x/metrics/[post_id]
+## Projects API
 
-Fetch metrics for a posted idea.
+### GET /api/projects
+
+Get all projects for the authenticated user's clients.
+
+**Query Parameters:**
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `status` | string | Filter by status (PLANNING, DESIGN, DEVELOPMENT, REVIEW, LAUNCHED) |
+| `clientId` | string | Filter by client |
 
 **Response:**
 ```json
 {
-  "data": {
-    "impressions": 1500,
-    "likes": 42,
-    "replies": 5,
-    "retweets": 12,
-    "bookmarks": 8
-  },
+  "data": [
+    {
+      "id": "uuid",
+      "name": "Website Redesign",
+      "status": "DEVELOPMENT",
+      "type": "WEBSITE",
+      "priority": "HIGH",
+      "budget": 10000,
+      "paidAmount": 5000,
+      "client": {
+        "id": "uuid",
+        "name": "Acme Corp"
+      }
+    }
+  ],
   "error": null
 }
 ```
 
-**Status:** Planned (V0.3)
+**Status:** Implemented
 
 ---
 
-### AI Services
+### POST /api/projects
 
-#### POST /api/ai/summarize
-
-Summarize an article or text.
+Create a new project.
 
 **Request Body:**
 ```json
 {
-  "url": "https://example.com/article",
-  "text": "Or provide text directly..."
+  "clientId": "client-uuid",
+  "name": "Website Redesign",
+  "type": "WEBSITE",
+  "status": "PLANNING",
+  "budget": 10000,
+  "startDate": "2026-01-26",
+  "dueDate": "2026-03-26"
 }
 ```
 
-**Response:**
-```json
-{
-  "data": {
-    "summary": "Key points from the article...",
-    "key_points": ["Point 1", "Point 2"]
-  },
-  "error": null
-}
-```
-
-**Status:** Planned (V0.3)
+**Status:** Implemented
 
 ---
 
-### Cron Jobs
+## Goals API
 
-#### GET /api/cron/post-scheduled
+### GET /api/goals
 
-Process scheduled posts. Called by Vercel Cron every minute.
+Get all goals for the authenticated user.
 
-**Headers:**
-| Header | Value |
-|--------|-------|
-| `Authorization` | `Bearer {CRON_SECRET}` |
+**Query Parameters:**
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `type` | string | Filter by type (DAILY, WEEKLY, MONTHLY, YEARLY) |
+| `completed` | boolean | Filter by completion status |
 
 **Response:**
 ```json
 {
-  "data": {
-    "processed": 2,
-    "failed": 0
-  },
+  "data": [
+    {
+      "id": "uuid",
+      "title": "Complete 4 deep work blocks",
+      "type": "DAILY",
+      "targetValue": 4,
+      "currentValue": 2,
+      "completedAt": null
+    }
+  ],
   "error": null
 }
 ```
 
-**Status:** Planned (Phase 4)
+**Status:** Implemented
+
+---
+
+### POST /api/goals
+
+Create a new goal.
+
+**Request Body:**
+```json
+{
+  "title": "Complete 4 deep work blocks",
+  "type": "DAILY",
+  "targetValue": 4,
+  "dueDate": "2026-01-26"
+}
+```
+
+**Status:** Implemented
 
 ---
 
@@ -298,32 +331,21 @@ Process scheduled posts. Called by Vercel Cron every minute.
 
 ---
 
-## Rate Limits
-
-API endpoints are rate-limited based on Vercel's default limits:
-- 1000 requests per 10 seconds per IP
-
-X API has its own limits:
-- 1500 tweets per 15-minute window
-- 300 tweets per 3-hour window
-
----
-
 ## Implementation Progress
 
-| Endpoint | Status | Phase |
-|----------|--------|-------|
-| `GET /api/ideas` | Planned | Phase 2 |
-| `POST /api/ideas` | Planned | Phase 2 |
-| `GET /api/ideas/[id]` | Planned | Phase 2 |
-| `PUT /api/ideas/[id]` | Planned | Phase 2 |
-| `DELETE /api/ideas/[id]` | Planned | Phase 2 |
-| `GET /api/x/auth` | Planned | Phase 4 |
-| `GET /api/x/callback` | Planned | Phase 4 |
-| `POST /api/x/post` | Planned | Phase 4 |
-| `GET /api/x/metrics/[id]` | Planned | V0.3 |
-| `POST /api/ai/summarize` | Planned | V0.3 |
-| `GET /api/cron/post-scheduled` | Planned | Phase 4 |
+| Endpoint | Status |
+|----------|--------|
+| `GET /api/tasks` | Implemented |
+| `POST /api/tasks` | Implemented |
+| `PATCH /api/tasks/[id]` | Planned |
+| `DELETE /api/tasks/[id]` | Planned |
+| `GET /api/clients` | Implemented |
+| `POST /api/clients` | Implemented |
+| `GET /api/clients/[id]` | Planned |
+| `GET /api/projects` | Implemented |
+| `POST /api/projects` | Implemented |
+| `GET /api/goals` | Implemented |
+| `POST /api/goals` | Implemented |
 
 ---
 
