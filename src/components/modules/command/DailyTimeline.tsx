@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { format, isSameDay } from 'date-fns'
+import { useDroppable } from '@dnd-kit/core'
 import { Plus, Clock } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -35,6 +36,17 @@ function formatTimeLabel(time: string): string {
   return `${hour12}:${m.toString().padStart(2, '0')} ${period}`
 }
 
+// Parse a DB date (Prisma @db.Date returns "2026-01-27T00:00:00.000Z")
+// as a local calendar date, ignoring the UTC timezone suffix.
+// Without this, US timezones see the previous day (midnight UTC = evening prior day locally).
+function parseCalendarDate(d: string | Date): Date {
+  const s = typeof d === 'string' ? d : d.toISOString()
+  // Extract YYYY-MM-DD and treat as local midnight
+  const [datePart] = s.split('T')
+  const [y, m, day] = datePart.split('-').map(Number)
+  return new Date(y, m - 1, day)
+}
+
 export function DailyTimeline({
   date,
   tasks,
@@ -59,7 +71,7 @@ export function DailyTimeline({
       (task) =>
         task.scheduledTime === time &&
         task.scheduledDate &&
-        isSameDay(new Date(task.scheduledDate), date)
+        isSameDay(parseCalendarDate(task.scheduledDate), date)
     )
   }
 
@@ -110,32 +122,12 @@ export function DailyTimeline({
                     onPause={onPauseTask}
                   />
                 ) : (
-                  <div
-                    className={cn(
-                      'flex items-center justify-center rounded-lg border border-dashed p-4 transition-all',
-                      isHovered
-                        ? 'border-accent/50 bg-accent/5'
-                        : 'border-border'
-                    )}
-                  >
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className={cn(
-                        'text-text-tertiary transition-opacity',
-                        isHovered ? 'opacity-100' : 'opacity-0'
-                      )}
-                      onClick={() => onAddTask?.(slot.time)}
-                    >
-                      <Plus className="mr-2 h-4 w-4" />
-                      Add task at {slot.label}
-                    </Button>
-                    {!isHovered && (
-                      <span className="text-sm text-text-tertiary">
-                        Empty block
-                      </span>
-                    )}
-                  </div>
+                  <EmptySlot
+                    time={slot.time}
+                    label={slot.label}
+                    isHovered={isHovered}
+                    onAddTask={onAddTask}
+                  />
                 )}
               </div>
             </div>
@@ -143,5 +135,49 @@ export function DailyTimeline({
         })}
       </CardContent>
     </Card>
+  )
+}
+
+interface EmptySlotProps {
+  time: string
+  label: string
+  isHovered: boolean
+  onAddTask?: (time: string) => void
+}
+
+function EmptySlot({ time, label, isHovered, onAddTask }: EmptySlotProps) {
+  const { isOver, setNodeRef } = useDroppable({
+    id: `slot-${time}`,
+    data: { type: 'timeline-slot', time },
+  })
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={cn(
+        'flex items-center justify-center rounded-lg border border-dashed p-4 transition-all',
+        isOver
+          ? 'border-accent bg-accent/10 ring-2 ring-accent/30'
+          : isHovered
+            ? 'border-accent/50 bg-accent/5'
+            : 'border-border'
+      )}
+    >
+      <Button
+        variant="ghost"
+        size="sm"
+        className={cn(
+          'text-text-tertiary transition-opacity',
+          isHovered || isOver ? 'opacity-100' : 'opacity-0'
+        )}
+        onClick={() => onAddTask?.(time)}
+      >
+        <Plus className="mr-2 h-4 w-4" />
+        {isOver ? 'Drop to create' : `Add task at ${label}`}
+      </Button>
+      {!isHovered && !isOver && (
+        <span className="text-sm text-text-tertiary">Empty block</span>
+      )}
+    </div>
   )
 }

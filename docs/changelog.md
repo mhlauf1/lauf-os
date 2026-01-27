@@ -9,7 +9,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-_Next: Database migration, drag-and-drop reordering, inline edit flows, Creative Library_
+_Next: Database migration, Intel Feed + AI Hub (Phase 3)_
+
+---
+
+## [0.5.0] - 2026-01-27
+
+### Added
+
+**Creative Library Module**
+
+Full Creative Library module with CRUD, search, filtering, and type-specific detail views.
+
+- Zod validation schemas (`src/lib/validations/library.schema.ts`)
+- API routes: `/api/library` (GET, POST) + `/api/library/[id]` (GET, PATCH, DELETE)
+- React Query hooks (`use-library.ts`): useLibrary, useLibraryItem, useCreateLibraryItem, useUpdateLibraryItem, useDeleteLibraryItem
+- Library type config (`src/config/library.ts`): colors, icons, labels per LibraryItemType
+- Components: LibraryItemCard, LibraryGrid, LibraryItemForm, TagInput
+- Library list page with stats cards, debounced search, type filter tabs, grid display
+- Library detail page with type-specific fields, external links, edit/delete
+- Navigation: Library moved from Coming Soon to new "Creative" nav group
+- `ensureUser` helper (`src/lib/prisma/ensure-user.ts`) for consistent user creation in API routes
+
+**Day Builder UX Overhaul**
+
+Major UX improvements to the Command Center Day Builder with drag-and-drop and a unified sidebar.
+
+- Installed `@dnd-kit/core` for drag-and-drop support
+- `CommandSidebar` component: tabbed sidebar with Goals / Activities tabs (replaces separate GoalsPanel + ActivityCatalog sections)
+- Draggable activities: `useDraggable` on ActivityCard in sidebar catalog with visual drag feedback
+- Droppable timeline slots: `useDroppable` on EmptySlot in DailyTimeline with glow/ring highlight
+- `DndContext` + `DragOverlay` wired into Command Center dashboard
+- Drag activity from sidebar → drop on empty slot → task auto-created with toast confirmation
+- TaskForm two-tab mode: "From Catalog" / "Manual" tabs when activities are available
+- Extracted `GoalsPanelContent` and `ActivityCatalogContent` for reuse in sidebar
+- Exported `ActivityCardInner` for DragOverlay rendering
+
+**Bug Fixes**
+
+- Fixed timezone bug in calendar date parsing: `parseCalendarDate()` strips UTC timezone from Prisma `@db.Date` to avoid off-by-one day errors in US timezones
+- Applied timezone fix to DailyTimeline, Calendar week view, and all task creation flows
+- Task creation now sends dates as UTC midnight (`T00:00:00.000Z`) for correct DB storage
 
 ---
 
@@ -247,6 +287,7 @@ This release pivots LAUF OS from a content-creation tool to a full **Personal Op
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 0.5.0 | 2026-01-27 | Creative Library module + Day Builder UX Overhaul (drag-and-drop, CommandSidebar, TaskForm tabs) |
 | 0.4.0 | 2026-01-27 | Critical fixes + modular hardening (toasts, delete confirmations, cache fixes) |
 | 0.3.0 | 2026-01-26 | Client CRM wire-up + Command Center polish |
 | 0.2.0 | 2026-01-26 | Day Builder + Activity Catalog, React Query, full CRUD APIs |
@@ -257,11 +298,6 @@ This release pivots LAUF OS from a content-creation tool to a full **Personal Op
 ---
 
 ## Upcoming Versions
-
-### 0.5.0 - Library Module
-- Design inspiration
-- AI image gallery
-- Component library
 
 ### 0.6.0 - Intel Feed & AI Hub
 - RSS feeds

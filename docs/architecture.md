@@ -2,7 +2,7 @@
 
 > LAUF OS System Architecture Documentation
 
-**Status:** MVP Phase 1 Complete + Phase 1.5 Hardening Complete
+**Status:** MVP Phase 1 Complete + Phase 1.5 Hardening Complete + Phase 2 Creative Library + Day Builder UX Overhaul Complete
 
 **Related Documentation:**
 - [MVP Checklist](./mvp-checklist.md) - Implementation progress
@@ -47,6 +47,7 @@ LAUF OS is a **Personal Operating System** - a unified dashboard for managing al
 | **Storage** | Supabase Storage | Media uploads, client assets |
 | **Deployment** | Vercel | Edge functions, Cron jobs |
 | **Validation** | Zod | Runtime validation, TypeScript inference |
+| **Drag & Drop** | @dnd-kit/core | Drag activities onto timeline slots |
 | **AI (Primary)** | Claude API | Reasoning, content improvement |
 
 ---
@@ -74,6 +75,9 @@ lauf-os/
 │   │   │   ├── projects/
 │   │   │   │   ├── page.tsx
 │   │   │   │   └── [id]/page.tsx
+│   │   │   ├── library/
+│   │   │   │   ├── page.tsx
+│   │   │   │   └── [id]/page.tsx
 │   │   │   └── settings/page.tsx
 │   │   └── api/
 │   │       ├── tasks/
@@ -88,9 +92,12 @@ lauf-os/
 │   │       ├── projects/
 │   │       │   ├── route.ts           # GET, POST
 │   │       │   └── [id]/route.ts      # GET, PATCH, DELETE
-│   │       └── goals/
+│   │       ├── goals/
+│   │       │   ├── route.ts           # GET, POST
+│   │       │   └── [id]/route.ts      # PATCH
+│   │       └── library/
 │   │           ├── route.ts           # GET, POST
-│   │           └── [id]/route.ts      # PATCH
+│   │           └── [id]/route.ts      # GET, PATCH, DELETE
 │   ├── components/
 │   │   ├── ui/                       # shadcn/ui primitives
 │   │   ├── providers.tsx             # QueryClientProvider (React Query)
@@ -98,11 +105,17 @@ lauf-os/
 │   │   │   ├── command/              # Command Center components
 │   │   │   │   ├── TimeBlock.tsx
 │   │   │   │   ├── TaskCard.tsx
-│   │   │   │   ├── TaskForm.tsx       # Task create/edit + "from activity" mode
-│   │   │   │   ├── ActivityCatalog.tsx # Activity picker grid
+│   │   │   │   ├── TaskForm.tsx       # Task create/edit + catalog picker + "from activity" mode
+│   │   │   │   ├── ActivityCatalog.tsx # Activity picker grid (draggable cards)
 │   │   │   │   ├── ActivityForm.tsx    # Activity create/edit dialog
-│   │   │   │   ├── DailyTimeline.tsx
-│   │   │   │   └── GoalsPanel.tsx
+│   │   │   │   ├── CommandSidebar.tsx  # Tabbed sidebar (Goals / Activities)
+│   │   │   │   ├── DailyTimeline.tsx   # Timeline with droppable empty slots
+│   │   │   │   └── GoalsPanel.tsx      # Goals panel + GoalsPanelContent export
+│   │   │   ├── library/              # Creative Library components
+│   │   │   │   ├── LibraryItemCard.tsx
+│   │   │   │   ├── LibraryGrid.tsx
+│   │   │   │   ├── LibraryItemForm.tsx
+│   │   │   │   └── TagInput.tsx
 │   │   │   └── clients/              # Client CRM components
 │   │   │       ├── HealthScoreBadge.tsx
 │   │   │       ├── ClientCard.tsx
@@ -128,12 +141,14 @@ lauf-os/
 │   │   ├── use-activities.ts         # React Query hooks for activities
 │   │   ├── use-goals.ts              # React Query hooks for goals
 │   │   ├── use-clients.ts            # React Query hooks for clients
-│   │   └── use-projects.ts           # React Query hooks for projects
+│   │   ├── use-projects.ts           # React Query hooks for projects
+│   │   └── use-library.ts            # React Query hooks for library items
 │   ├── stores/
 │   ├── types/
 │   └── config/
 │       ├── navigation.ts
 │       ├── categories.ts
+│       ├── library.ts                # Library type config (colors, icons, labels)
 │       └── site.ts
 ├── prisma/
 │   ├── schema.prisma                 # Database schema
@@ -192,6 +207,7 @@ Used for all data that lives on the server:
 - Goals and check-ins (`use-goals.ts`)
 - Clients (`use-clients.ts`)
 - Projects (`use-projects.ts`)
+- Library items (`use-library.ts`)
 - Feed items (planned)
 
 Each hook follows the same pattern: `useX` for reads, `useCreateX` / `useUpdateX` / `useDeleteX` for mutations with automatic cache invalidation.
@@ -396,7 +412,9 @@ export function TaskCard({ task, onEdit }: TaskCardProps) {
 | **State** | React Query + Zustand | Server vs client state separation |
 | **Styling** | Tailwind + CSS Variables | Design tokens, utility-first |
 | **Time blocks** | 90 minutes | Optimal deep work duration |
+| **Drag & Drop** | @dnd-kit/core | DnD from activity catalog to timeline |
+| **Calendar dates** | parseCalendarDate() | Strip UTC from Prisma @db.Date to avoid timezone off-by-one |
 
 ---
 
-_Last updated: January 2026 (v0.4.0 — hardening complete)_
+_Last updated: January 2026 (v0.5.0 — Creative Library + Day Builder UX Overhaul)_

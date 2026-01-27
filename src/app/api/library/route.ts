@@ -1,0 +1,119 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
+import { prisma } from '@/lib/prisma'
+import { createServerClient } from '@/lib/supabase/server'
+import { ensureUser } from '@/lib/prisma/ensure-user'
+import { createLibraryItemSchema } from '@/lib/validations/library.schema'
+import type { LibraryItemType } from '@prisma/client'
+
+export async function GET(request: NextRequest) {
+  try {
+    const supabase = await createServerClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const { searchParams } = new URL(request.url)
+    const type = searchParams.get('type')
+    const search = searchParams.get('search')
+    const tag = searchParams.get('tag')
+    const showcased = searchParams.get('showcased')
+    const forSale = searchParams.get('forSale')
+
+    const items = await prisma.libraryItem.findMany({
+      where: {
+        userId: user.id,
+        ...(type && { type: type as LibraryItemType }),
+        ...(search && {
+          OR: [
+            { title: { contains: search, mode: 'insensitive' } },
+            { description: { contains: search, mode: 'insensitive' } },
+          ],
+        }),
+        ...(tag && { tags: { has: tag } }),
+        ...(showcased === 'true' && { isShowcased: true }),
+        ...(forSale === 'true' && { isForSale: true }),
+      },
+      orderBy: { updatedAt: 'desc' },
+      include: {
+        assets: {
+          take: 1,
+          select: { id: true, thumbnailUrl: true, url: true },
+        },
+        _count: {
+          select: { assets: true },
+        },
+      },
+    })
+
+    return NextResponse.json({ data: items })
+  } catch (error) {
+    console.error('Error fetching library items:', error)
+    return NextResponse.json(
+      { error: 'Failed to fetch library items' },
+      { status: 500 }
+    )
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const supabase = await createServerClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    await ensureUser(user)
+
+    const body = await request.json()
+
+    // Clean empty string URLs before validation
+    const cleaned = { ...body }
+    for (const key of ['sourceUrl', 'figmaUrl', 'githubUrl']) {
+      if (cleaned[key] === '') delete cleaned[key]
+    }
+
+    const validatedData = createLibraryItemSchema.parse(cleaned)
+
+    const item = await prisma.libraryItem.create({
+      data: {
+        userId: user.id,
+        type: validatedData.type,
+        title: validatedData.title,
+        description: validatedData.description,
+        sourceUrl: validatedData.sourceUrl || null,
+        figmaUrl: validatedData.figmaUrl || null,
+        githubUrl: validatedData.githubUrl || null,
+        prompt: validatedData.prompt,
+        aiTool: validatedData.aiTool,
+        techStack: validatedData.techStack || [],
+        tags: validatedData.tags || [],
+        isShowcased: validatedData.isShowcased ?? false,
+        isForSale: validatedData.isForSale ?? false,
+        price: validatedData.price,
+      },
+    })
+
+    return NextResponse.json({ data: item }, { status: 201 })
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: 'Validation error', details: error.errors },
+        { status: 400 }
+      )
+    }
+    console.error('Error creating library item:', error)
+    return NextResponse.json(
+      { error: 'Failed to create library item' },
+      { status: 500 }
+    )
+  }
+}

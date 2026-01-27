@@ -67,15 +67,17 @@ export const workNavItems: NavItem[] = [
   },
 ]
 
-// Future modules - Coming soon
-export const comingSoonNavItems: NavItem[] = [
+// Creative modules
+export const creativeNavItems: NavItem[] = [
   {
     label: 'Library',
     href: '/library',
     icon: Library,
-    badge: 'Phase 2',
-    disabled: true,
   },
+]
+
+// Future modules - Coming soon
+export const comingSoonNavItems: NavItem[] = [
   {
     label: 'Health',
     href: '/health',
@@ -138,6 +140,10 @@ export const navGroups: NavGroup[] = [
   {
     label: 'Work',
     items: workNavItems,
+  },
+  {
+    label: 'Creative',
+    items: creativeNavItems,
   },
   {
     label: 'Coming Soon',

@@ -22,24 +22,28 @@ LAUF OS is designed as a **Personal Operating System** with 9 core modules:
 
 ---
 
-## Phase 2: Library Module
+## Phase 2: Library Module (Complete)
 
-**Goal**: Visual inspiration and component library
+**Status**: Implemented in v0.5.0
 
-### Features
+### Completed Features
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| **Library CRUD** | Full create/read/update/delete with Zod validation | Done |
+| **Type Filtering** | Filter by Inspiration, Template, AI Image, Component, Idea | Done |
+| **Search** | Debounced search across title and description | Done |
+| **Detail Views** | Type-specific fields, external links, edit/delete | Done |
+| **Tag System** | TagInput component with multi-tag support | Done |
+| **Stats Cards** | Item counts per type on list page | Done |
+
+### Remaining Library Work
 
 | Feature | Description | Priority |
 |---------|-------------|----------|
-| **Design Inspiration** | Save screenshots, Dribbble shots, references | High |
-| **AI Image Gallery** | Midjourney, NanoBanana, DALL-E outputs | High |
-| **Component Library** | Reusable UI components with code | Medium |
-| **Template Bank** | Landing pages, dashboards, forms | Medium |
-| **Tagging System** | Organize by tech stack, style, project | Medium |
-
-### Database Models (Ready)
-
-- `LibraryItem` - Inspiration, templates, AI images
-- `Asset` - File storage with metadata
+| **File Uploads** | Supabase Storage for images/screenshots | High |
+| **Masonry Grid** | Pinterest-style layout for visual items | Medium |
+| **Progress Dashboard** | Compounding chart of library growth | Low |
 
 ---
 
@@ -189,6 +193,11 @@ LAUF OS is designed as a **Personal Operating System** with 9 core modules:
 | 2026-01-27 | Parent-controlled dialog close | Forms don't close themselves; parent closes on mutation success for better UX |
 | 2026-01-27 | Date range filter over exact match | Fixes timezone mismatch when filtering tasks by date |
 | 2026-01-27 | Cross-model cache invalidation | Ensures UI consistency when deleting entities with relations |
+| 2026-01-27 | @dnd-kit/core for drag-and-drop | Lightweight, only need core (no sortable). PointerSensor with distance:8 distinguishes click vs drag |
+| 2026-01-27 | CommandSidebar tabbed panel | Combines Goals + Activities in one sidebar card, saves vertical space |
+| 2026-01-27 | TaskForm two-tab mode | "From Catalog" / "Manual" tabs for quick activity picking vs manual entry |
+| 2026-01-27 | parseCalendarDate() for Prisma @db.Date | Strips UTC timezone to prevent off-by-one day in US timezones |
+| 2026-01-27 | ensureUser helper for API routes | Consistent user creation across all API routes, avoids duplication |
 
 ---
 
@@ -202,4 +211,4 @@ _Space to log feature requests as they come up_
 
 ---
 
-_Last updated: January 2026 (v0.4.0)_
+_Last updated: January 2026 (v0.5.0)_

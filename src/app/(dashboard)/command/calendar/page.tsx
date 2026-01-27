@@ -44,12 +44,21 @@ export default function CalendarPage() {
   const [taskFormOpen, setTaskFormOpen] = useState(false)
   const [taskFormInitial, setTaskFormInitial] = useState<Partial<TaskFormData>>({})
 
+  // Parse a DB date (Prisma @db.Date returns "2026-01-27T00:00:00.000Z")
+  // as a local calendar date, stripping the UTC timezone to avoid off-by-one.
+  function parseCalendarDate(d: string | Date): Date {
+    const s = typeof d === 'string' ? d : d.toISOString()
+    const [datePart] = s.split('T')
+    const [y, m, day] = datePart.split('-').map(Number)
+    return new Date(y, m - 1, day)
+  }
+
   // Group tasks by day and time
   const tasksByDayTime = useMemo(() => {
     const map: Record<string, Task[]> = {}
     for (const task of tasks) {
       if (task.scheduledDate && task.scheduledTime) {
-        const dayKey = format(new Date(task.scheduledDate), 'yyyy-MM-dd')
+        const dayKey = format(parseCalendarDate(task.scheduledDate), 'yyyy-MM-dd')
         const key = `${dayKey}-${task.scheduledTime}`
         if (!map[key]) map[key] = []
         map[key].push(task)
@@ -63,7 +72,7 @@ export default function CalendarPage() {
     const map: Record<string, number> = {}
     for (const task of tasks) {
       if (task.scheduledDate) {
-        const dayKey = format(new Date(task.scheduledDate), 'yyyy-MM-dd')
+        const dayKey = format(parseCalendarDate(task.scheduledDate), 'yyyy-MM-dd')
         map[dayKey] = (map[dayKey] || 0) + 1
       }
     }
@@ -86,7 +95,7 @@ export default function CalendarPage() {
 
   function handleCreateTask(data: TaskFormData) {
     const scheduledDate = data.scheduledDate
-      ? new Date(data.scheduledDate + 'T00:00:00').toISOString()
+      ? new Date(data.scheduledDate + 'T00:00:00.000Z').toISOString()
       : undefined
 
     createTask.mutate(

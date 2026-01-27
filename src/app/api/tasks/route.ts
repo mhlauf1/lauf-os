@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { createServerClient } from '@/lib/supabase/server'
+import { ensureUser } from '@/lib/prisma/ensure-user'
 
 const createTaskSchema = z.object({
   title: z.string().min(1).max(500),
@@ -110,6 +111,8 @@ export async function POST(request: NextRequest) {
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    await ensureUser(user)
 
     const body = await request.json()
     const validatedData = createTaskSchema.parse(body)
