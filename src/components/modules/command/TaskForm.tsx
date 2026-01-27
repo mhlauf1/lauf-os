@@ -12,9 +12,9 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog'
 import { categoryList } from '@/config/categories'
-import type { TaskCategory, Priority, EnergyLevel } from '@prisma/client'
+import type { TaskCategory, Priority, EnergyLevel, Activity, Goal } from '@prisma/client'
 
-interface TaskFormData {
+export interface TaskFormData {
   title: string
   description: string
   category: TaskCategory
@@ -23,6 +23,8 @@ interface TaskFormData {
   timeBlockMinutes: number
   scheduledDate: string
   scheduledTime: string
+  activityId?: string
+  goalId?: string
 }
 
 interface TaskFormProps {
@@ -31,6 +33,8 @@ interface TaskFormProps {
   onSubmit: (data: TaskFormData) => void
   initialData?: Partial<TaskFormData>
   isEditing?: boolean
+  fromActivity?: Activity | null
+  goals?: Goal[]
 }
 
 const priorities: { value: Priority; label: string }[] = [
@@ -40,22 +44,34 @@ const priorities: { value: Priority; label: string }[] = [
   { value: 'URGENT', label: 'Urgent' },
 ]
 
-const energyLevels: { value: EnergyLevel; label: string; description: string }[] = [
-  { value: 'DEEP_WORK', label: 'Deep Work', description: 'High focus required' },
-  { value: 'MODERATE', label: 'Moderate', description: 'Normal focus' },
-  { value: 'LIGHT', label: 'Light', description: 'Low energy tasks' },
+const energyLevels: { value: EnergyLevel; label: string }[] = [
+  { value: 'DEEP_WORK', label: 'Deep Work' },
+  { value: 'MODERATE', label: 'Moderate' },
+  { value: 'LIGHT', label: 'Light' },
 ]
 
 const timeOptions = [30, 45, 60, 90, 120, 180]
 
-export function TaskForm({
-  open,
-  onOpenChange,
-  onSubmit,
-  initialData,
-  isEditing = false,
-}: TaskFormProps) {
-  const [formData, setFormData] = useState<TaskFormData>({
+function getDefaultFormData(
+  initialData?: Partial<TaskFormData>,
+  fromActivity?: Activity | null
+): TaskFormData {
+  if (fromActivity) {
+    return {
+      title: fromActivity.title,
+      description: fromActivity.description || '',
+      category: fromActivity.category,
+      priority: 'MEDIUM',
+      energyLevel: fromActivity.energyLevel,
+      timeBlockMinutes: fromActivity.defaultDuration,
+      scheduledDate: initialData?.scheduledDate || '',
+      scheduledTime: initialData?.scheduledTime || '',
+      activityId: fromActivity.id,
+      goalId: initialData?.goalId || '',
+    }
+  }
+
+  return {
     title: initialData?.title || '',
     description: initialData?.description || '',
     category: initialData?.category || 'CODE',
@@ -64,7 +80,33 @@ export function TaskForm({
     timeBlockMinutes: initialData?.timeBlockMinutes || 90,
     scheduledDate: initialData?.scheduledDate || '',
     scheduledTime: initialData?.scheduledTime || '',
-  })
+    activityId: initialData?.activityId || '',
+    goalId: initialData?.goalId || '',
+  }
+}
+
+export function TaskForm({
+  open,
+  onOpenChange,
+  onSubmit,
+  initialData,
+  isEditing = false,
+  fromActivity,
+  goals = [],
+}: TaskFormProps) {
+  const formKey = open ? `${fromActivity?.id ?? 'manual'}-${initialData?.scheduledTime ?? ''}` : 'closed'
+  const [formData, setFormData] = useState<TaskFormData>(
+    getDefaultFormData(initialData, fromActivity)
+  )
+
+  // Reset form data when dialog opens with different context
+  const [lastKey, setLastKey] = useState(formKey)
+  if (formKey !== lastKey) {
+    setLastKey(formKey)
+    if (open) {
+      setFormData(getDefaultFormData(initialData, fromActivity))
+    }
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -72,11 +114,18 @@ export function TaskForm({
     onOpenChange(false)
   }
 
+  const isFromActivity = !!fromActivity
+  const dialogTitle = isEditing
+    ? 'Edit Task'
+    : isFromActivity
+      ? `Add "${fromActivity.title}" Block`
+      : 'Create New Task'
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>{isEditing ? 'Edit Task' : 'Create New Task'}</DialogTitle>
+          <DialogTitle>{dialogTitle}</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -94,19 +143,24 @@ export function TaskForm({
             />
           </div>
 
-          {/* Description */}
-          <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
-            <textarea
-              id="description"
-              value={formData.description}
-              onChange={(e) =>
-                setFormData((prev) => ({ ...prev, description: e.target.value }))
-              }
-              placeholder="Add more details..."
-              className="w-full min-h-[80px] rounded-lg border border-border bg-surface px-3 py-2 text-sm placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-accent"
-            />
-          </div>
+          {/* Description - collapsed for quick-add */}
+          {!isFromActivity && (
+            <div className="space-y-2">
+              <Label htmlFor="description">Description</Label>
+              <textarea
+                id="description"
+                value={formData.description}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    description: e.target.value,
+                  }))
+                }
+                placeholder="Add more details..."
+                className="w-full min-h-[80px] rounded-lg border border-border bg-surface px-3 py-2 text-sm placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-accent"
+              />
+            </div>
+          )}
 
           {/* Category */}
           <div className="space-y-2">
@@ -233,12 +287,44 @@ export function TaskForm({
             </div>
           </div>
 
+          {/* Goal Link */}
+          {goals.length > 0 && (
+            <div className="space-y-2">
+              <Label htmlFor="goalId">Link to Goal (optional)</Label>
+              <select
+                id="goalId"
+                value={formData.goalId || ''}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    goalId: e.target.value || undefined,
+                  }))
+                }
+                className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
+              >
+                <option value="">No goal</option>
+                {goals.map((goal) => (
+                  <option key={goal.id} value={goal.id}>
+                    {goal.title}
+                    {goal.targetValue
+                      ? ` (${goal.currentValue}/${goal.targetValue})`
+                      : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+            >
               Cancel
             </Button>
             <Button type="submit">
-              {isEditing ? 'Save Changes' : 'Create Task'}
+              {isEditing ? 'Save Changes' : isFromActivity ? 'Add Block' : 'Create Task'}
             </Button>
           </DialogFooter>
         </form>

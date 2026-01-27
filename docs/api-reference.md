@@ -104,16 +104,28 @@ Create a new task.
 
 ### PATCH /api/tasks/[id]
 
-Update an existing task.
+Update an existing task. When status changes to `DONE`:
+- Sets `completedAt` timestamp
+- Auto-increments linked goal's `currentValue` (if `goalId` is set)
+- Updates linked activity's `timesUsed` and `lastUsed` (if `activityId` is set)
 
 **Request Body:**
 ```json
 {
-  "status": "IN_PROGRESS"
+  "status": "DONE",
+  "title": "Updated title",
+  "category": "CODE",
+  "priority": "HIGH",
+  "scheduledDate": "2026-01-26T00:00:00.000Z",
+  "scheduledTime": "09:00",
+  "activityId": "optional-activity-id",
+  "goalId": "optional-goal-id"
 }
 ```
 
-**Status:** Planned
+All fields are optional.
+
+**Status:** Implemented
 
 ---
 
@@ -121,7 +133,84 @@ Update an existing task.
 
 Delete a task.
 
-**Status:** Planned
+**Status:** Implemented
+
+---
+
+## Activities API
+
+### GET /api/activities
+
+Get all active activities for the authenticated user, ordered by sortOrder then usage frequency.
+
+**Response:**
+```json
+{
+  "data": [
+    {
+      "id": "uuid",
+      "title": "Design Work",
+      "description": "Client design deliverables",
+      "category": "DESIGN",
+      "defaultDuration": 90,
+      "energyLevel": "DEEP_WORK",
+      "isActive": true,
+      "sortOrder": 0,
+      "timesUsed": 12,
+      "lastUsed": "2026-01-25T14:00:00.000Z"
+    }
+  ],
+  "error": null
+}
+```
+
+**Status:** Implemented
+
+---
+
+### POST /api/activities
+
+Create a new activity for the catalog.
+
+**Request Body:**
+```json
+{
+  "title": "Design Work",
+  "description": "Client design deliverables",
+  "category": "DESIGN",
+  "defaultDuration": 90,
+  "energyLevel": "DEEP_WORK"
+}
+```
+
+**Status:** Implemented
+
+---
+
+### PATCH /api/activities/[id]
+
+Update an existing activity.
+
+**Request Body:**
+```json
+{
+  "title": "Updated title",
+  "defaultDuration": 120,
+  "isActive": false
+}
+```
+
+All fields are optional.
+
+**Status:** Implemented
+
+---
+
+### DELETE /api/activities/[id]
+
+Delete an activity.
+
+**Status:** Implemented
 
 ---
 
@@ -317,6 +406,26 @@ Create a new goal.
 
 ---
 
+### PATCH /api/goals/[id]
+
+Update an existing goal. Supports direct progress updates and completion toggling.
+
+**Request Body:**
+```json
+{
+  "title": "Updated goal",
+  "currentValue": 15,
+  "targetValue": 30,
+  "completedAt": "2026-01-26T00:00:00.000Z"
+}
+```
+
+All fields are optional. Set `completedAt` to `null` to un-complete.
+
+**Status:** Implemented
+
+---
+
 ## Error Codes
 
 | Status | Description |
@@ -337,8 +446,12 @@ Create a new goal.
 |----------|--------|
 | `GET /api/tasks` | Implemented |
 | `POST /api/tasks` | Implemented |
-| `PATCH /api/tasks/[id]` | Planned |
-| `DELETE /api/tasks/[id]` | Planned |
+| `PATCH /api/tasks/[id]` | Implemented |
+| `DELETE /api/tasks/[id]` | Implemented |
+| `GET /api/activities` | Implemented |
+| `POST /api/activities` | Implemented |
+| `PATCH /api/activities/[id]` | Implemented |
+| `DELETE /api/activities/[id]` | Implemented |
 | `GET /api/clients` | Implemented |
 | `POST /api/clients` | Implemented |
 | `GET /api/clients/[id]` | Planned |
@@ -346,6 +459,7 @@ Create a new goal.
 | `POST /api/projects` | Implemented |
 | `GET /api/goals` | Implemented |
 | `POST /api/goals` | Implemented |
+| `PATCH /api/goals/[id]` | Implemented |
 
 ---
 

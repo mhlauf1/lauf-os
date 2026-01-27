@@ -76,17 +76,27 @@ lauf-os/
 │   │   │   │   └── [id]/page.tsx
 │   │   │   └── settings/page.tsx
 │   │   └── api/
-│   │       ├── tasks/route.ts
+│   │       ├── tasks/
+│   │       │   ├── route.ts           # GET, POST
+│   │       │   └── [id]/route.ts      # PATCH, DELETE
+│   │       ├── activities/
+│   │       │   ├── route.ts           # GET, POST
+│   │       │   └── [id]/route.ts      # PATCH, DELETE
 │   │       ├── clients/route.ts
 │   │       ├── projects/route.ts
-│   │       └── goals/route.ts
+│   │       └── goals/
+│   │           ├── route.ts           # GET, POST
+│   │           └── [id]/route.ts      # PATCH
 │   ├── components/
 │   │   ├── ui/                       # shadcn/ui primitives
+│   │   ├── providers.tsx             # QueryClientProvider (React Query)
 │   │   ├── modules/
 │   │   │   ├── command/              # Command Center components
 │   │   │   │   ├── TimeBlock.tsx
 │   │   │   │   ├── TaskCard.tsx
-│   │   │   │   ├── TaskForm.tsx
+│   │   │   │   ├── TaskForm.tsx       # Task create/edit + "from activity" mode
+│   │   │   │   ├── ActivityCatalog.tsx # Activity picker grid
+│   │   │   │   ├── ActivityForm.tsx    # Activity create/edit dialog
 │   │   │   │   ├── DailyTimeline.tsx
 │   │   │   │   └── GoalsPanel.tsx
 │   │   │   └── clients/              # Client CRM components
@@ -107,6 +117,10 @@ lauf-os/
 │   │       ├── cn.ts
 │   │       └── encrypt.ts
 │   ├── hooks/
+│   │   ├── use-auth.ts               # Auth state management
+│   │   ├── use-tasks.ts              # React Query hooks for tasks
+│   │   ├── use-activities.ts         # React Query hooks for activities
+│   │   └── use-goals.ts              # React Query hooks for goals
 │   ├── stores/
 │   ├── types/
 │   └── config/
@@ -165,17 +179,32 @@ User Action → React Query Mutation
 
 Used for all data that lives on the server:
 
-- Tasks and time blocks
+- Tasks and time blocks (`use-tasks.ts`)
+- Activities catalog (`use-activities.ts`)
+- Goals and check-ins (`use-goals.ts`)
 - Clients and projects
-- Goals and check-ins
 - Feed items
+
+Each hook follows the same pattern: `useX` for reads, `useCreateX` / `useUpdateX` / `useDeleteX` for mutations with automatic cache invalidation.
 
 ```typescript
 // Example: use-tasks.ts
-export function useTasks(filters?: TaskFilters) {
+export function useTasks(filter?: TasksFilter) {
   return useQuery({
-    queryKey: ['tasks', filters],
-    queryFn: () => fetchTasks(filters),
+    queryKey: ['tasks', filter],
+    queryFn: () => fetchTasks(filter),
+  })
+}
+
+export function useUpdateTask() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: updateTask,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] })
+      queryClient.invalidateQueries({ queryKey: ['goals'] })     // goal progress
+      queryClient.invalidateQueries({ queryKey: ['activities'] }) // usage stats
+    },
   })
 }
 ```
@@ -206,8 +235,9 @@ Prisma provides type-safe database access with:
 | Model | Purpose |
 |-------|---------|
 | `User` | User profile, preferences, timezone |
-| `Task` | 90-minute time blocks with categories |
-| `Goal` | Daily/weekly/monthly goals |
+| `Task` | 90-minute time blocks with categories; links to Activity + Goal |
+| `Activity` | Reusable catalog of activities (design, code, fitness, etc.) that pre-fill task creation |
+| `Goal` | Daily/weekly/monthly goals with progress; auto-incremented by task completion |
 | `Client` | Client info, health scores, credentials |
 | `Project` | Project pipeline with statuses |
 | `Asset` | Files, screenshots, documents |
@@ -283,13 +313,15 @@ type ApiResponse<T> = {
 
 ```
 components/modules/
-├── command/              # Command Center
-│   ├── TimeBlock.tsx     # 90-min block card
-│   ├── TaskCard.tsx      # Task in queue
-│   ├── TaskForm.tsx      # Create/edit task
-│   ├── DailyTimeline.tsx # Hour-by-hour view
-│   └── GoalsPanel.tsx    # Goals sidebar
-└── clients/              # Client CRM
+├── command/                # Command Center
+│   ├── TimeBlock.tsx       # 90-min block card
+│   ├── TaskCard.tsx        # Task in queue
+│   ├── TaskForm.tsx        # Create/edit task + "from activity" quick-create
+│   ├── ActivityCatalog.tsx # Activity picker grid for Day Builder
+│   ├── ActivityForm.tsx    # Create/edit activity dialog
+│   ├── DailyTimeline.tsx   # Hour-by-hour view
+│   └── GoalsPanel.tsx      # Goals sidebar
+└── clients/                # Client CRM
     ├── HealthScoreBadge.tsx
     ├── ClientCard.tsx
     └── ProjectKanban.tsx

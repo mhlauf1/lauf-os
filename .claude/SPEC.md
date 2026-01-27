@@ -547,38 +547,54 @@ enum LibraryItemType {
 
 # 5. Module Specifications
 
-## 5.1 Command Center
+## 5.1 Command Center (Day Builder)
 
-> _"The daily mission control. Shows what to work on, when, and with everything prepped."_
+> _"Not a task manager. A Day Builder. Select from your activity catalog, build 90-min blocks, execute, and compound into monthly goals."_
 
 ### Core Philosophy
 
-1. **Work in 90-minute blocks**: Deep work requires uninterrupted focus
-2. **Work backwards**: Collect tasks for the week, then schedule into blocks
-3. **Prep mode**: Night before, tomorrow's blocks are auto-suggested
-4. **Energy mapping**: Match task energy to your natural patterns
+1. **Day Builder, not task manager**: Select from a curated activity catalog to build your day
+2. **Work in 90-minute blocks**: Deep work requires uninterrupted focus
+3. **Activity Catalog**: Everything you do is a reusable activity (design, code, tweet, fitness)
+4. **Goal-linked execution**: Every completed block auto-increments monthly goal progress
+5. **Energy mapping**: Match task energy to your natural patterns
+6. **Compound progress**: Daily → weekly → monthly progress builds over time
+
+### The Day Builder Flow
+
+1. Set **monthly goals** ("Complete 3 client projects", "Post 30 tweets", "Work out 20x")
+2. Build an **Activity Catalog** of everything you do
+3. Each morning: **select activities** from the catalog to fill your day's 90-min blocks
+4. **Execute blocks.** Completing them auto-increments linked goal progress.
+5. Stats update in real-time. The system grows with you.
 
 ### Features
 
-| Feature               | Description                                                   |
-| --------------------- | ------------------------------------------------------------- |
-| **Daily Timeline**    | Hour-by-hour view with 90-min blocks, color-coded by category |
-| **Weekly Planner**    | 7-day grid with drag-drop scheduling                          |
-| **Task Queue**        | Backlog of tasks ready to schedule                            |
-| **Goals Panel**       | Daily/weekly/monthly goals with progress                      |
-| **Context Preloader** | Linked assets and project info per task                       |
-| **Prep Mode**         | AI suggests tomorrow's schedule                               |
-| **Weekly Review**     | What got done, what worked, next week planning                |
+| Feature                | Description                                                   | Status |
+| ---------------------- | ------------------------------------------------------------- | ------ |
+| **Day Builder**        | Dashboard with timeline + goals + activity catalog            | Done   |
+| **Activity Catalog**   | Grid of reusable activities to build your day from            | Done   |
+| **Daily Timeline**     | Hour-by-hour view with 90-min blocks, color-coded by category | Done   |
+| **Goals Panel**        | Monthly goals with auto-incrementing progress                 | Done   |
+| **Quick-Add from Activity** | Click activity → pre-filled dialog → block created       | Done   |
+| **Goal Linking**       | Link blocks to goals for auto-progress tracking               | Done   |
+| **Stats Cards**        | Real-time blocks completed, goal progress, activity count     | Done   |
+| **Weekly Planner**     | 7-day grid with drag-drop scheduling                          | Planned |
+| **Context Preloader**  | Linked assets and project info per task                       | Planned |
+| **Prep Mode**          | AI suggests tomorrow's schedule                               | Planned |
+| **Weekly Review**      | What got done, what worked, next week planning                | Planned |
 
 ### UI Components
 
-- `DailyTimeline` - Main timeline view
-- `TimeBlock` - 90-min block card
+- `DailyTimeline` - Main timeline view with time slots
+- `TimeBlock` - 90-min block card with play/complete/pause actions
 - `TaskCard` - Task in queue
-- `TaskForm` - Create/edit task
-- `WeekGrid` - Weekly calendar
-- `GoalsPanel` - Goals sidebar
-- `PrepMode` - AI suggestions
+- `TaskForm` - Create/edit task with "from activity" quick-create mode + goal linking
+- `ActivityCatalog` - Activity picker grid for Day Builder
+- `ActivityForm` - Create/edit activity dialog
+- `GoalsPanel` - Goals sidebar with progress tracking
+- `WeekGrid` - Weekly calendar (planned)
+- `PrepMode` - AI suggestions (planned)
 
 ### AI Integration
 

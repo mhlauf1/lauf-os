@@ -120,6 +120,7 @@ model User {
   // Relations
   tasks         Task[]
   goals         Goal[]
+  activities    Activity[]
   clients       Client[]
   libraryItems  LibraryItem[]
   assets        Asset[]
@@ -138,6 +139,8 @@ model Task {
   id               String       @id @default(uuid())
   userId           String       @map("user_id")
   projectId        String?      @map("project_id")
+  activityId       String?      @map("activity_id")
+  goalId           String?      @map("goal_id")
   title            String
   description      String?
   category         TaskCategory
@@ -153,11 +156,15 @@ model Task {
   updatedAt        DateTime     @updatedAt @map("updated_at")
 
   // Relations
-  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  project Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project  Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  activity Activity? @relation(fields: [activityId], references: [id], onDelete: SetNull)
+  goal     Goal?     @relation(fields: [goalId], references: [id], onDelete: SetNull)
 
   @@index([userId])
   @@index([projectId])
+  @@index([activityId])
+  @@index([goalId])
   @@index([scheduledDate])
   @@index([status])
   @@map("tasks")
@@ -177,11 +184,36 @@ model Goal {
   updatedAt    DateTime  @updatedAt @map("updated_at")
 
   // Relations
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tasks Task[]
 
   @@index([userId])
   @@index([type])
   @@map("goals")
+}
+
+model Activity {
+  id              String       @id @default(uuid())
+  userId          String       @map("user_id")
+  title           String
+  description     String?
+  category        TaskCategory
+  defaultDuration Int          @default(90) @map("default_duration")
+  energyLevel     EnergyLevel  @default(MODERATE) @map("energy_level")
+  icon            String?
+  isActive        Boolean      @default(true) @map("is_active")
+  sortOrder       Int          @default(0) @map("sort_order")
+  timesUsed       Int          @default(0) @map("times_used")
+  lastUsed        DateTime?    @map("last_used")
+  createdAt       DateTime     @default(now()) @map("created_at")
+  updatedAt       DateTime     @updatedAt @map("updated_at")
+
+  // Relations
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tasks Task[]
+
+  @@index([userId])
+  @@map("activities")
 }
 
 // ============================================================================

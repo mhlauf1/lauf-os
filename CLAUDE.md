@@ -71,15 +71,17 @@ src/
 │   │   ├── projects/       # Project pipeline
 │   │   └── settings/       # User settings
 │   └── api/                # API routes
-│       ├── tasks/
+│       ├── tasks/          # GET, POST + [id] PATCH, DELETE
+│       ├── activities/     # GET, POST + [id] PATCH, DELETE
 │       ├── clients/
 │       ├── projects/
-│       └── goals/
+│       └── goals/          # GET, POST + [id] PATCH
 ├── components/
 │   ├── ui/                 # shadcn/ui primitives
 │   ├── modules/            # Module-specific components
-│   │   ├── command/        # TimeBlock, TaskCard, TaskForm, etc.
+│   │   ├── command/        # TimeBlock, TaskCard, TaskForm, ActivityCatalog, ActivityForm, etc.
 │   │   └── clients/        # ClientCard, HealthScoreBadge, etc.
+│   ├── providers.tsx       # QueryClientProvider (React Query)
 │   ├── layouts/            # Layout components
 │   └── shared/             # Shared components
 ├── lib/
@@ -88,7 +90,7 @@ src/
 │   ├── ai/                 # AI service clients
 │   ├── validations/        # Zod schemas
 │   └── utils/              # Utility functions
-├── hooks/                  # React hooks
+├── hooks/                  # React hooks (use-tasks, use-activities, use-goals, use-auth)
 ├── stores/                 # Zustand stores
 ├── types/                  # TypeScript types
 └── config/                 # App configuration
@@ -109,8 +111,9 @@ Prisma schema located at `prisma/schema.prisma`. Key models:
 
 ### Core Models
 - **User** - App user with preferences and timezone
-- **Task** - 90-min blocks with category, priority, energy level
-- **Goal** - Daily/weekly/monthly/yearly goals with progress
+- **Task** - 90-min blocks with category, priority, energy level; links to Activity + Goal
+- **Activity** - Catalog of reusable activities (design, code, tweet, fitness, etc.) that pre-fill task creation
+- **Goal** - Daily/weekly/monthly/yearly goals with progress; auto-incremented by task completion
 
 ### Client CRM Models
 - **Client** - Client with health score, status, credentials
@@ -209,13 +212,25 @@ type ApiResponse<T> = {
 
 ## Key Patterns
 
+### Day Builder + Activity Catalog
+
+The core concept: **Build your day from a curated catalog of activities.**
+
+1. Set **monthly goals** ("Complete 3 projects", "Post 30 tweets", "Work out 20x")
+2. Build an **Activity Catalog** of everything you do (design, code, tweet, fitness, etc.)
+3. Each morning: **select activities** from the catalog to fill your day's 90-min blocks
+4. **Execute blocks.** Completing them auto-increments linked goal progress.
+5. Daily → weekly → monthly progress compounds.
+
 ### 90-Minute Blocks
 
-The core productivity concept. Tasks are scheduled into 90-minute deep work blocks. Each task has:
+Tasks are scheduled into 90-minute deep work blocks. Each task has:
 - **Category** for color-coding
 - **Priority** for urgency
 - **Energy Level** to match to time of day
 - **Scheduled Time** for calendar placement
+- **Activity link** (optional) — pre-fills from activity defaults
+- **Goal link** (optional) — auto-increments goal on completion
 
 ### Health Score System
 
@@ -227,7 +242,10 @@ Clients have a health score (GREEN/YELLOW/RED) based on:
 
 ### State Management
 
-- **Server state** (React Query): Tasks, clients, projects, goals
+- **Server state** (React Query): Tasks, activities, clients, projects, goals
+  - Hooks: `use-tasks.ts`, `use-activities.ts`, `use-goals.ts`
+  - Each hook exports `useX`, `useCreateX`, `useUpdateX`, `useDeleteX`
+  - Mutations auto-invalidate related query caches
 - **Client state** (Zustand): UI state, filters, drafts
 
 ### Authentication
@@ -266,6 +284,14 @@ Clients have a health score (GREEN/YELLOW/RED) based on:
 - [x] Command Center routes and components
 - [x] Client CRM routes and components
 - [x] Navigation structure
+- [x] Activity model + CRUD API (`/api/activities`)
+- [x] Task individual API (`/api/tasks/[id]`) with PATCH + DELETE
+- [x] Goal individual API (`/api/goals/[id]`) with PATCH
+- [x] React Query hooks (use-tasks, use-activities, use-goals)
+- [x] React Query provider wired into root layout
+- [x] Activity Catalog component
+- [x] Day Builder dashboard (timeline + goals + catalog)
+- [x] Task completion auto-increments goal progress + activity usage
+- [x] TaskForm "from activity" quick-create mode with goal linking
 - [ ] Database migration (waiting for credentials)
-- [ ] Full CRUD operations
-- [ ] React Query integration
+- [ ] Calendar view with week navigation

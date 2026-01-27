@@ -23,6 +23,8 @@ const createTaskSchema = z.object({
   timeBlockMinutes: z.number().int().min(15).max(480).optional(),
   energyLevel: z.enum(['DEEP_WORK', 'MODERATE', 'LIGHT']).optional(),
   projectId: z.string().uuid().optional(),
+  activityId: z.string().uuid().optional(),
+  goalId: z.string().uuid().optional(),
 })
 
 export async function GET(request: NextRequest) {
@@ -104,6 +106,8 @@ export async function POST(request: NextRequest) {
         timeBlockMinutes: validatedData.timeBlockMinutes || 90,
         energyLevel: validatedData.energyLevel || 'MODERATE',
         projectId: validatedData.projectId,
+        activityId: validatedData.activityId,
+        goalId: validatedData.goalId,
       },
     })
 

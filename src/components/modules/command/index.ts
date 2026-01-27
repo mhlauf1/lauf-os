@@ -1,5 +1,7 @@
 export { TimeBlock } from './TimeBlock'
 export { TaskCard } from './TaskCard'
 export { TaskForm } from './TaskForm'
+export { ActivityForm } from './ActivityForm'
 export { DailyTimeline } from './DailyTimeline'
 export { GoalsPanel } from './GoalsPanel'
+export { ActivityCatalog } from './ActivityCatalog'
