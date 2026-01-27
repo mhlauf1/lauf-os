@@ -23,7 +23,7 @@ import {
 } from '@/components/modules/command'
 import { useTasks, useCreateTask, useUpdateTask } from '@/hooks/use-tasks'
 import { useActivities, useCreateActivity, useUpdateActivity, useDeleteActivity } from '@/hooks/use-activities'
-import { useGoals, useCreateGoal } from '@/hooks/use-goals'
+import { useGoals, useCreateGoal, useUpdateGoal } from '@/hooks/use-goals'
 import type { Activity, GoalType } from '@prisma/client'
 import type { TaskFormData } from '@/components/modules/command/TaskForm'
 
@@ -48,6 +48,7 @@ export default function DayBuilderPage() {
   const updateActivity = useUpdateActivity()
   const deleteActivity = useDeleteActivity()
   const createGoal = useCreateGoal()
+  const updateGoal = useUpdateGoal()
 
   // UI state
   const [taskFormOpen, setTaskFormOpen] = useState(false)
@@ -275,6 +276,12 @@ export default function DayBuilderPage() {
             activeType={goalType}
             onTypeChange={setGoalType}
             onAddGoal={handleAddGoal}
+            onToggleComplete={(id, completed) => {
+              updateGoal.mutate({
+                id,
+                completedAt: completed ? new Date().toISOString() : null,
+              })
+            }}
           />
         </div>
       </div>

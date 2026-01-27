@@ -42,13 +42,28 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status')
     const category = searchParams.get('category')
     const date = searchParams.get('date')
+    const dateFrom = searchParams.get('dateFrom')
+    const dateTo = searchParams.get('dateTo')
+
+    // Build date filter: exact date or date range
+    let dateFilter: Record<string, unknown> | undefined
+    if (date) {
+      dateFilter = { scheduledDate: new Date(date) }
+    } else if (dateFrom || dateTo) {
+      dateFilter = {
+        scheduledDate: {
+          ...(dateFrom && { gte: new Date(dateFrom) }),
+          ...(dateTo && { lte: new Date(dateTo) }),
+        },
+      }
+    }
 
     const tasks = await prisma.task.findMany({
       where: {
         userId: user.id,
         ...(status && status !== 'all' && { status: status as any }),
         ...(category && { category: category as any }),
-        ...(date && { scheduledDate: new Date(date) }),
+        ...dateFilter,
       },
       orderBy: [{ scheduledDate: 'asc' }, { scheduledTime: 'asc' }],
       include: {

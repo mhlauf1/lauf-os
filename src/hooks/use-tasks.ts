@@ -8,6 +8,8 @@ interface ApiResponse<T> {
 
 interface TasksFilter {
   date?: string
+  dateFrom?: string
+  dateTo?: string
   status?: string
   category?: string
 }
@@ -15,6 +17,8 @@ interface TasksFilter {
 async function fetchTasks(filter: TasksFilter = {}): Promise<Task[]> {
   const params = new URLSearchParams()
   if (filter.date) params.set('date', filter.date)
+  if (filter.dateFrom) params.set('dateFrom', filter.dateFrom)
+  if (filter.dateTo) params.set('dateTo', filter.dateTo)
   if (filter.status) params.set('status', filter.status)
   if (filter.category) params.set('category', filter.category)
 
