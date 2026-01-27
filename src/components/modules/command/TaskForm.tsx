@@ -111,7 +111,6 @@ export function TaskForm({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     onSubmit(formData)
-    onOpenChange(false)
   }
 
   const isFromActivity = !!fromActivity
@@ -175,7 +174,7 @@ export function TaskForm({
                   }
                   className={`rounded-lg border p-2 text-xs font-medium transition-colors ${
                     formData.category === cat.id
-                      ? `border-current ${cat.textColor} ${cat.bgColor}`
+                      ? 'border-text-primary/30 bg-white/10 text-text-primary'
                       : 'border-border text-text-secondary hover:border-border/80'
                   }`}
                 >
@@ -199,7 +198,7 @@ export function TaskForm({
                     }
                     className={`flex-1 rounded-lg border px-2 py-1.5 text-xs font-medium transition-colors ${
                       formData.priority === p.value
-                        ? 'border-accent bg-accent/10 text-accent'
+                        ? 'border-text-primary/30 bg-white/10 text-text-primary'
                         : 'border-border text-text-secondary hover:border-border/80'
                     }`}
                   >
@@ -221,7 +220,7 @@ export function TaskForm({
                     }
                     className={`flex-1 rounded-lg border px-2 py-1.5 text-xs font-medium transition-colors ${
                       formData.energyLevel === e.value
-                        ? 'border-accent bg-accent/10 text-accent'
+                        ? 'border-text-primary/30 bg-white/10 text-text-primary'
                         : 'border-border text-text-secondary hover:border-border/80'
                     }`}
                   >
@@ -245,7 +244,7 @@ export function TaskForm({
                   }
                   className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
                     formData.timeBlockMinutes === mins
-                      ? 'border-accent bg-accent/10 text-accent'
+                      ? 'border-text-primary/30 bg-white/10 text-text-primary'
                       : 'border-border text-text-secondary hover:border-border/80'
                   }`}
                 >

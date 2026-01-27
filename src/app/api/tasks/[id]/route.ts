@@ -16,6 +16,9 @@ const updateTaskSchema = z.object({
       'ADMIN',
       'SAAS',
       'NETWORKING',
+      'PERSONAL',
+      'LEISURE',
+      'ROUTINE',
     ])
     .optional(),
   priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'URGENT']).optional(),

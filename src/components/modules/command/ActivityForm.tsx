@@ -79,7 +79,6 @@ export function ActivityForm({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     onSubmit(formData)
-    onOpenChange(false)
   }
 
   return (
@@ -132,7 +131,7 @@ export function ActivityForm({
                   }
                   className={`rounded-lg border p-2 text-xs font-medium transition-colors ${
                     formData.category === cat.id
-                      ? `border-current ${cat.textColor} ${cat.bgColor}`
+                      ? 'border-text-primary/30 bg-white/10 text-text-primary'
                       : 'border-border text-text-secondary hover:border-border/80'
                   }`}
                 >
@@ -157,7 +156,7 @@ export function ActivityForm({
                   }
                   className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
                     formData.defaultDuration === mins
-                      ? 'border-accent bg-accent/10 text-accent'
+                      ? 'border-text-primary/30 bg-white/10 text-text-primary'
                       : 'border-border text-text-secondary hover:border-border/80'
                   }`}
                 >
@@ -179,7 +178,7 @@ export function ActivityForm({
                   }
                   className={`flex-1 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
                     formData.energyLevel === e.value
-                      ? 'border-accent bg-accent/10 text-accent'
+                      ? 'border-text-primary/30 bg-white/10 text-text-primary'
                       : 'border-border text-text-secondary hover:border-border/80'
                   }`}
                 >

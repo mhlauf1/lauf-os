@@ -17,7 +17,7 @@
 
 |             |                    |
 | ----------- | ------------------ |
-| **Version** | 1.1                |
+| **Version** | 1.2                |
 | **Created** | January 2025       |
 | **Updated** | January 2026       |
 | **Status**  | Active Development |
@@ -596,8 +596,9 @@ enum LibraryItemType {
 - `ActivityCatalog` - Activity picker grid for Day Builder
 - `ActivityForm` - Create/edit activity dialog
 - `GoalsPanel` - Goals sidebar with progress tracking + clickable completion toggle
-- `GoalFormDialog` - Create goals of any type (Daily/Weekly/Monthly/Yearly)
+- `GoalFormDialog` - Create goals of any type (Daily/Weekly/Monthly/Yearly) with type picker
 - `CalendarPage` - Week view with day columns, time slots, task rendering
+- `ConfirmDeleteDialog` - Reusable delete confirmation (AlertDialog wrapper)
 - `PrepMode` - AI suggestions (planned)
 
 ### AI Integration
@@ -984,6 +985,22 @@ enum LibraryItemType {
 - [x] Client CRM: React Query hooks (use-clients, use-projects)
 - [x] Client CRM: Individual API routes (/api/clients/[id], /api/projects/[id])
 
+### Phase 1.5: Critical Fixes + Modular Hardening
+
+- [x] Fix GoalsPanel dashboard tabs (fetch all incomplete goals, not just monthly)
+- [x] GoalFormDialog supports Daily/Weekly/Monthly type selection
+- [x] Fix timezone bug in task date filtering (date range instead of exact match)
+- [x] Fix useAuth infinite re-render (useMemo for stable Supabase client)
+- [x] Fix form close timing (dialog closes on mutation success, not on submit)
+- [x] Wire TimeBlock delete button + remove dead Reschedule item
+- [x] Remove dead ClientCard buttons (Add Project, Log Contact)
+- [x] Wire ProjectKanban edit button to project detail navigation
+- [x] Add Sonner toast notifications to root layout
+- [x] Add toast success/error to all mutation callsites
+- [x] Add delete confirmation dialogs (AlertDialog) for clients + projects
+- [x] Create reusable ConfirmDeleteDialog shared component
+- [x] Fix cross-model cache invalidation (delete task → goals/activities, delete client → projects, etc.)
+
 ## 7.3 Phase 2: Asset Management
 
 - [ ] Configure Supabase Storage
@@ -1333,9 +1350,9 @@ See `/prisma/schema.prisma` for full schema with all models:
 
 ---
 
-**Version:** 1.1
+**Version:** 1.2
 **Last Updated:** January 2026
-**Status:** Phase 1 Complete, Phase 2 CRM Wire-Up Complete
+**Status:** Phase 1 Complete, Phase 2 CRM Wire-Up Complete, Phase 1.5 Hardening Complete
 
 ---
 

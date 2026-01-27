@@ -103,7 +103,7 @@ function NavLink({ item, isActive }: NavLinkProps) {
       className={cn(
         'flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors',
         isActive
-          ? 'bg-accent/10 text-accent'
+          ? 'bg-white/10 text-text-primary font-medium'
           : 'text-text-secondary hover:bg-surface-elevated hover:text-text-primary'
       )}
     >

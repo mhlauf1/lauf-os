@@ -9,7 +9,72 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-_Next: Database migration, drag-and-drop, calendar week view, Client CRM wire-up_
+_Next: Database migration, drag-and-drop reordering, inline edit flows, Creative Library_
+
+---
+
+## [0.4.0] - 2026-01-27
+
+### Added
+
+**Critical Fixes + Modular Hardening**
+
+Comprehensive bug fix and UX hardening pass across all modules. Every button now works or has been removed, all mutations show toast feedback, and destructive actions require confirmation.
+
+**Bug Fixes**
+- GoalsPanel dashboard tabs now show all goal types (Daily/Weekly/Monthly), not just monthly
+- GoalFormDialog supports picking goal type instead of hardcoding MONTHLY
+- Task date filtering uses date range instead of exact match (fixes timezone mismatch)
+- `useAuth` hook uses `useMemo` for stable Supabase client reference (fixes infinite re-render)
+- TaskForm and ActivityForm no longer close prematurely — dialog closes on mutation success
+
+**Dead Button Cleanup**
+- TimeBlock "Delete" dropdown item wired to `useDeleteTask`
+- TimeBlock "Reschedule" dropdown item removed (no flow exists)
+- ClientCard "Add Project" and "Log Contact" dropdown items removed (no flows exist)
+- ProjectKanban "Edit" dropdown item wired to navigate to project detail page
+
+**Error Handling & UX**
+- Sonner `<Toaster>` wired into root layout with dark theme
+- Toast success/error notifications on every mutation across all pages (dashboard, tasks, calendar, clients, projects)
+- Delete confirmation dialogs (AlertDialog) for clients and projects
+- New reusable `ConfirmDeleteDialog` shared component (`src/components/shared/`)
+
+**Cache Invalidation Fixes**
+- `useDeleteTask` now also invalidates `['goals']` and `['activities']` query caches
+- `useDeleteClient` now also invalidates `['projects']` query cache
+- `useCreateProject` now also invalidates `['clients']` query cache
+- `useDeleteProject` now also invalidates `['clients']` and `['tasks']` query caches
+
+**New Components**
+- `src/components/shared/ConfirmDeleteDialog.tsx` — reusable AlertDialog wrapper
+- `src/components/ui/alert-dialog.tsx` — shadcn/ui AlertDialog primitive
+
+---
+
+## [0.3.0] - 2026-01-26
+
+### Added
+
+**Client CRM Wire-Up + Command Center Polish**
+
+Full wire-up of Client CRM module and Command Center pages with real API data.
+
+**Client CRM**
+- React Query hooks: `use-clients.ts` (useClients, useClient, useCreateClient, useUpdateClient, useDeleteClient)
+- React Query hooks: `use-projects.ts` (useProjects, useProject, useCreateProject, useUpdateProject, useDeleteProject)
+- Individual API routes: `/api/clients/[id]` (GET, PATCH, DELETE) and `/api/projects/[id]` (GET, PATCH, DELETE)
+- Clients list page with health stats cards, debounced search, status filter tabs
+- Client create page with full form and redirect on success
+- Client detail page with overview, contact info, linked projects, delete
+- Projects page with Kanban board rendering real data, status change via drag
+- Project detail page with overview, links, tasks list, delete
+
+**Command Center Polish**
+- Tasks page wired with status/category filters, search, and create dialog
+- Goals page wired with type filters, real stats, completion toggle, goal creation
+- GoalsPanel dashboard toggle (click to mark goals complete/incomplete)
+- Calendar week view with date-range filtering, task rendering, week navigation
 
 ---
 
@@ -182,6 +247,8 @@ This release pivots LAUF OS from a content-creation tool to a full **Personal Op
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 0.4.0 | 2026-01-27 | Critical fixes + modular hardening (toasts, delete confirmations, cache fixes) |
+| 0.3.0 | 2026-01-26 | Client CRM wire-up + Command Center polish |
 | 0.2.0 | 2026-01-26 | Day Builder + Activity Catalog, React Query, full CRUD APIs |
 | 0.1.0 | 2026-01-26 | Pivot to Personal OS, Prisma, new architecture |
 | 0.0.2 | 2026-01-26 | Documentation, src/ structure |
@@ -191,23 +258,12 @@ This release pivots LAUF OS from a content-creation tool to a full **Personal Op
 
 ## Upcoming Versions
 
-### 0.2.1 - Command Center Polish
-- Drag-and-drop reordering
-- Calendar week view
-- Task category filtering
-- Goal completion via UI
-
-### 0.3.0 - Client CRM Complete
-- Client management
-- Project pipeline
-- Health scores
-
-### 0.4.0 - Library Module
+### 0.5.0 - Library Module
 - Design inspiration
 - AI image gallery
 - Component library
 
-### 0.5.0 - Intel Feed & AI Hub
+### 0.6.0 - Intel Feed & AI Hub
 - RSS feeds
 - Article summaries
 - AI tool tracking

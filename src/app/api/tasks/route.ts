@@ -15,6 +15,9 @@ const createTaskSchema = z.object({
     'ADMIN',
     'SAAS',
     'NETWORKING',
+    'PERSONAL',
+    'LEISURE',
+    'ROUTINE',
   ]),
   priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'URGENT']).optional(),
   status: z.enum(['TODO', 'IN_PROGRESS', 'BLOCKED', 'DONE']).optional(),
@@ -45,15 +48,20 @@ export async function GET(request: NextRequest) {
     const dateFrom = searchParams.get('dateFrom')
     const dateTo = searchParams.get('dateTo')
 
-    // Build date filter: exact date or date range
+    // Build date filter: use range to avoid timezone mismatch
     let dateFilter: Record<string, unknown> | undefined
     if (date) {
-      dateFilter = { scheduledDate: new Date(date) }
+      dateFilter = {
+        scheduledDate: {
+          gte: new Date(date + 'T00:00:00.000Z'),
+          lte: new Date(date + 'T23:59:59.999Z'),
+        },
+      }
     } else if (dateFrom || dateTo) {
       dateFilter = {
         scheduledDate: {
-          ...(dateFrom && { gte: new Date(dateFrom) }),
-          ...(dateTo && { lte: new Date(dateTo) }),
+          ...(dateFrom && { gte: new Date(dateFrom + 'T00:00:00.000Z') }),
+          ...(dateTo && { lte: new Date(dateTo + 'T23:59:59.999Z') }),
         },
       }
     }

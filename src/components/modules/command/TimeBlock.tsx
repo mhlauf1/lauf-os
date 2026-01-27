@@ -17,6 +17,7 @@ import type { Task, TaskCategory, TaskStatus } from '@prisma/client'
 interface TimeBlockProps {
   task: Pick<Task, 'id' | 'title' | 'category' | 'status' | 'timeBlockMinutes' | 'scheduledTime'>
   onEdit?: (id: string) => void
+  onDelete?: (id: string) => void
   onComplete?: (id: string) => void
   onStart?: (id: string) => void
   onPause?: (id: string) => void
@@ -26,6 +27,7 @@ interface TimeBlockProps {
 export function TimeBlock({
   task,
   onEdit,
+  onDelete,
   onComplete,
   onStart,
   onPause,
@@ -131,8 +133,10 @@ export function TimeBlock({
             <DropdownMenuItem onClick={() => onEdit?.(task.id)}>
               Edit task
             </DropdownMenuItem>
-            <DropdownMenuItem>Reschedule</DropdownMenuItem>
-            <DropdownMenuItem className="text-red-400">
+            <DropdownMenuItem
+              className="text-red-400"
+              onClick={() => onDelete?.(task.id)}
+            >
               Delete
             </DropdownMenuItem>
           </DropdownMenuContent>

@@ -292,7 +292,35 @@ Get a single client with projects.
 }
 ```
 
-**Status:** Planned
+**Status:** Implemented
+
+---
+
+### PATCH /api/clients/[id]
+
+Update an existing client.
+
+**Request Body:**
+```json
+{
+  "name": "Updated Name",
+  "status": "PAUSED",
+  "healthScore": "YELLOW",
+  "contractValue": 10000
+}
+```
+
+All fields are optional.
+
+**Status:** Implemented
+
+---
+
+### DELETE /api/clients/[id]
+
+Delete a client and all associated data (projects, opportunities).
+
+**Status:** Implemented
 
 ---
 
@@ -350,6 +378,57 @@ Create a new project.
   "dueDate": "2026-03-26"
 }
 ```
+
+**Status:** Implemented
+
+---
+
+### GET /api/projects/[id]
+
+Get a single project with client, tasks, and asset counts.
+
+**Response:**
+```json
+{
+  "data": {
+    "id": "uuid",
+    "name": "Website Redesign",
+    "status": "DEVELOPMENT",
+    "client": { "id": "uuid", "name": "Acme Corp", "company": "Acme Corporation" },
+    "tasks": [{ "id": "uuid", "title": "Design homepage", "category": "DESIGN", "status": "TODO" }],
+    "_count": { "tasks": 5, "assets": 3 }
+  },
+  "error": null
+}
+```
+
+**Status:** Implemented
+
+---
+
+### PATCH /api/projects/[id]
+
+Update an existing project.
+
+**Request Body:**
+```json
+{
+  "name": "Updated Name",
+  "status": "REVIEW",
+  "priority": "URGENT",
+  "budget": 15000
+}
+```
+
+All fields are optional.
+
+**Status:** Implemented
+
+---
+
+### DELETE /api/projects/[id]
+
+Delete a project and associated data.
 
 **Status:** Implemented
 
@@ -454,13 +533,18 @@ All fields are optional. Set `completedAt` to `null` to un-complete.
 | `DELETE /api/activities/[id]` | Implemented |
 | `GET /api/clients` | Implemented |
 | `POST /api/clients` | Implemented |
-| `GET /api/clients/[id]` | Planned |
+| `GET /api/clients/[id]` | Implemented |
+| `PATCH /api/clients/[id]` | Implemented |
+| `DELETE /api/clients/[id]` | Implemented |
 | `GET /api/projects` | Implemented |
 | `POST /api/projects` | Implemented |
+| `GET /api/projects/[id]` | Implemented |
+| `PATCH /api/projects/[id]` | Implemented |
+| `DELETE /api/projects/[id]` | Implemented |
 | `GET /api/goals` | Implemented |
 | `POST /api/goals` | Implemented |
 | `PATCH /api/goals/[id]` | Implemented |
 
 ---
 
-_Last updated: 2026-01-26_
+_Last updated: 2026-01-27_

@@ -16,6 +16,9 @@ const updateActivitySchema = z.object({
       'ADMIN',
       'SAAS',
       'NETWORKING',
+      'PERSONAL',
+      'LEISURE',
+      'ROUTINE',
     ])
     .optional(),
   defaultDuration: z.number().int().min(15).max(480).optional(),

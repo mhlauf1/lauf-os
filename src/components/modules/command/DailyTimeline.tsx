@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { format, addMinutes, setHours, setMinutes, isSameDay } from 'date-fns'
+import { format, isSameDay } from 'date-fns'
 import { Plus, Clock } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -14,12 +14,25 @@ interface DailyTimelineProps {
   tasks: Task[]
   onAddTask?: (time: string) => void
   onEditTask?: (id: string) => void
+  onDeleteTask?: (id: string) => void
   onCompleteTask?: (id: string) => void
   onStartTask?: (id: string) => void
   onPauseTask?: (id: string) => void
-  workStartHour?: number
-  workEndHour?: number
-  blockDuration?: number
+  slots?: string[]
+}
+
+// Default day schedule: 6:30 AM – 10:30 PM
+const DEFAULT_SLOTS = [
+  '06:30', '07:30', '09:00', '10:30',
+  '12:00', '13:30', '15:00', '16:30',
+  '18:00', '19:30', '21:00',
+]
+
+function formatTimeLabel(time: string): string {
+  const [h, m] = time.split(':').map(Number)
+  const period = h >= 12 ? 'PM' : 'AM'
+  const hour12 = h % 12 || 12
+  return `${hour12}:${m.toString().padStart(2, '0')} ${period}`
 }
 
 export function DailyTimeline({
@@ -27,33 +40,18 @@ export function DailyTimeline({
   tasks,
   onAddTask,
   onEditTask,
+  onDeleteTask,
   onCompleteTask,
   onStartTask,
   onPauseTask,
-  workStartHour = 8,
-  workEndHour = 18,
-  blockDuration = 90,
+  slots = DEFAULT_SLOTS,
 }: DailyTimelineProps) {
   const [hoveredSlot, setHoveredSlot] = useState<string | null>(null)
 
-  // Generate time slots
-  const generateTimeSlots = () => {
-    const slots: { time: string; date: Date }[] = []
-    let currentTime = setMinutes(setHours(date, workStartHour), 0)
-    const endTime = setMinutes(setHours(date, workEndHour), 0)
-
-    while (currentTime < endTime) {
-      slots.push({
-        time: format(currentTime, 'HH:mm'),
-        date: currentTime,
-      })
-      currentTime = addMinutes(currentTime, blockDuration)
-    }
-
-    return slots
-  }
-
-  const timeSlots = generateTimeSlots()
+  const timeSlots = slots.map((time) => ({
+    time,
+    label: formatTimeLabel(time),
+  }))
 
   // Get task for a specific time slot
   const getTaskForSlot = (time: string) => {
@@ -96,8 +94,8 @@ export function DailyTimeline({
               onMouseLeave={() => setHoveredSlot(null)}
             >
               {/* Time Label */}
-              <div className="w-16 pt-3 text-sm text-text-secondary">
-                {slot.time}
+              <div className="w-20 pt-3 text-sm text-text-secondary">
+                {slot.label}
               </div>
 
               {/* Slot Content */}
@@ -106,6 +104,7 @@ export function DailyTimeline({
                   <TimeBlock
                     task={task}
                     onEdit={onEditTask}
+                    onDelete={onDeleteTask}
                     onComplete={onCompleteTask}
                     onStart={onStartTask}
                     onPause={onPauseTask}
@@ -129,11 +128,11 @@ export function DailyTimeline({
                       onClick={() => onAddTask?.(slot.time)}
                     >
                       <Plus className="mr-2 h-4 w-4" />
-                      Add task at {slot.time}
+                      Add task at {slot.label}
                     </Button>
                     {!isHovered && (
                       <span className="text-sm text-text-tertiary">
-                        Empty {blockDuration}-min block
+                        Empty block
                       </span>
                     )}
                   </div>

@@ -185,6 +185,10 @@ LAUF OS is designed as a **Personal Operating System** with 9 core modules:
 | 2026-01-26 | Add Prisma ORM | Type-safe queries, schema as source of truth |
 | 2026-01-26 | 90-minute blocks | Optimal deep work duration |
 | 2026-01-26 | Client health scores | Quick visual status of relationships |
+| 2026-01-27 | Sonner over shadcn toast | Direct import with `theme="dark"`, avoids next-themes dependency |
+| 2026-01-27 | Parent-controlled dialog close | Forms don't close themselves; parent closes on mutation success for better UX |
+| 2026-01-27 | Date range filter over exact match | Fixes timezone mismatch when filtering tasks by date |
+| 2026-01-27 | Cross-model cache invalidation | Ensures UI consistency when deleting entities with relations |
 
 ---
 
@@ -198,4 +202,4 @@ _Space to log feature requests as they come up_
 
 ---
 
-_Last updated: January 2026_
+_Last updated: January 2026 (v0.4.0)_

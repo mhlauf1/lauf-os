@@ -2,7 +2,7 @@
 
 > LAUF OS System Architecture Documentation
 
-**Status:** MVP Phase 1 - Command Center + Client CRM
+**Status:** MVP Phase 1 Complete + Phase 1.5 Hardening Complete
 
 **Related Documentation:**
 - [MVP Checklist](./mvp-checklist.md) - Implementation progress
@@ -82,8 +82,12 @@ lauf-os/
 │   │       ├── activities/
 │   │       │   ├── route.ts           # GET, POST
 │   │       │   └── [id]/route.ts      # PATCH, DELETE
-│   │       ├── clients/route.ts
-│   │       ├── projects/route.ts
+│   │       ├── clients/
+│   │       │   ├── route.ts           # GET, POST
+│   │       │   └── [id]/route.ts      # GET, PATCH, DELETE
+│   │       ├── projects/
+│   │       │   ├── route.ts           # GET, POST
+│   │       │   └── [id]/route.ts      # GET, PATCH, DELETE
 │   │       └── goals/
 │   │           ├── route.ts           # GET, POST
 │   │           └── [id]/route.ts      # PATCH
@@ -103,6 +107,8 @@ lauf-os/
 │   │   │       ├── HealthScoreBadge.tsx
 │   │   │       ├── ClientCard.tsx
 │   │   │       └── ProjectKanban.tsx
+│   │   ├── shared/                   # Shared components
+│   │   │   └── ConfirmDeleteDialog.tsx # Reusable delete confirmation
 │   │   └── layouts/
 │   │       └── Sidebar.tsx
 │   ├── lib/
@@ -117,10 +123,12 @@ lauf-os/
 │   │       ├── cn.ts
 │   │       └── encrypt.ts
 │   ├── hooks/
-│   │   ├── use-auth.ts               # Auth state management
+│   │   ├── use-auth.ts               # Auth state management (useMemo for stable client)
 │   │   ├── use-tasks.ts              # React Query hooks for tasks
 │   │   ├── use-activities.ts         # React Query hooks for activities
-│   │   └── use-goals.ts              # React Query hooks for goals
+│   │   ├── use-goals.ts              # React Query hooks for goals
+│   │   ├── use-clients.ts            # React Query hooks for clients
+│   │   └── use-projects.ts           # React Query hooks for projects
 │   ├── stores/
 │   ├── types/
 │   └── config/
@@ -182,8 +190,9 @@ Used for all data that lives on the server:
 - Tasks and time blocks (`use-tasks.ts`)
 - Activities catalog (`use-activities.ts`)
 - Goals and check-ins (`use-goals.ts`)
-- Clients and projects
-- Feed items
+- Clients (`use-clients.ts`)
+- Projects (`use-projects.ts`)
+- Feed items (planned)
 
 Each hook follows the same pattern: `useX` for reads, `useCreateX` / `useUpdateX` / `useDeleteX` for mutations with automatic cache invalidation.
 
@@ -390,4 +399,4 @@ export function TaskCard({ task, onEdit }: TaskCardProps) {
 
 ---
 
-_Last updated: January 2026_
+_Last updated: January 2026 (v0.4.0 — hardening complete)_

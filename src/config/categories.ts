@@ -74,6 +74,30 @@ export const categoryConfig: Record<TaskCategory, CategoryConfig> = {
     textColor: 'text-pink-400',
     icon: 'Network',
   },
+  PERSONAL: {
+    id: 'PERSONAL',
+    label: 'Personal',
+    color: '#a78bfa',
+    bgColor: 'bg-purple-500/10',
+    textColor: 'text-purple-400',
+    icon: 'User',
+  },
+  LEISURE: {
+    id: 'LEISURE',
+    label: 'Leisure',
+    color: '#34d399',
+    bgColor: 'bg-emerald-500/10',
+    textColor: 'text-emerald-400',
+    icon: 'Coffee',
+  },
+  ROUTINE: {
+    id: 'ROUTINE',
+    label: 'Routine',
+    color: '#fbbf24',
+    bgColor: 'bg-amber-500/10',
+    textColor: 'text-amber-400',
+    icon: 'Sun',
+  },
 }
 
 export const categoryList = Object.values(categoryConfig)

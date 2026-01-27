@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react'
 import { format, startOfWeek, addDays, isSameDay } from 'date-fns'
 import { ChevronLeft, ChevronRight, Plus, Loader2 } from 'lucide-react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { TaskForm } from '@/components/modules/command/TaskForm'
@@ -13,14 +14,17 @@ import type { Task, TaskCategory } from '@prisma/client'
 import type { TaskFormData } from '@/components/modules/command/TaskForm'
 
 const timeSlots = [
-  '08:00',
-  '09:30',
-  '11:00',
-  '12:30',
-  '14:00',
-  '15:30',
-  '17:00',
+  '06:30', '07:30', '09:00', '10:30',
+  '12:00', '13:30', '15:00', '16:30',
+  '18:00', '19:30', '21:00',
 ]
+
+function formatTimeLabel(time: string): string {
+  const [h, m] = time.split(':').map(Number)
+  const period = h >= 12 ? 'PM' : 'AM'
+  const hour12 = h % 12 || 12
+  return `${hour12}:${m.toString().padStart(2, '0')} ${period}`
+}
 
 export default function CalendarPage() {
   const [currentDate, setCurrentDate] = useState(new Date())
@@ -33,7 +37,7 @@ export default function CalendarPage() {
   const dateTo = format(weekEnd, 'yyyy-MM-dd')
 
   const { data: tasks = [], isLoading } = useTasks({ dateFrom, dateTo })
-  const { data: goals = [] } = useGoals({ type: 'MONTHLY', completed: 'false' })
+  const { data: goals = [] } = useGoals({ completed: 'false' })
   const createTask = useCreateTask()
 
   // Task form state
@@ -85,17 +89,26 @@ export default function CalendarPage() {
       ? new Date(data.scheduledDate + 'T00:00:00').toISOString()
       : undefined
 
-    createTask.mutate({
-      title: data.title,
-      description: data.description || undefined,
-      category: data.category,
-      priority: data.priority,
-      energyLevel: data.energyLevel,
-      timeBlockMinutes: data.timeBlockMinutes,
-      scheduledDate,
-      scheduledTime: data.scheduledTime || undefined,
-      goalId: data.goalId || undefined,
-    })
+    createTask.mutate(
+      {
+        title: data.title,
+        description: data.description || undefined,
+        category: data.category,
+        priority: data.priority,
+        energyLevel: data.energyLevel,
+        timeBlockMinutes: data.timeBlockMinutes,
+        scheduledDate,
+        scheduledTime: data.scheduledTime || undefined,
+        goalId: data.goalId || undefined,
+      },
+      {
+        onSuccess: () => {
+          toast.success('Task created')
+          setTaskFormOpen(false)
+        },
+        onError: (err) => toast.error(err.message || 'Failed to create task'),
+      }
+    )
   }
 
   return (
@@ -180,7 +193,7 @@ export default function CalendarPage() {
               <div key={time} className="grid grid-cols-8 border-b border-border last:border-b-0">
                 {/* Time label */}
                 <div className="border-r border-border p-3 text-xs text-text-secondary">
-                  {time}
+                  {formatTimeLabel(time)}
                 </div>
                 {/* Day cells */}
                 {weekDays.map((day) => {

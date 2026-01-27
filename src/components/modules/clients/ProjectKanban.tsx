@@ -20,6 +20,7 @@ interface ProjectWithClient extends Project {
 interface ProjectKanbanProps {
   projects: ProjectWithClient[]
   onProjectClick?: (id: string) => void
+  onEditProject?: (id: string) => void
   onAddProject?: (status: ProjectStatus) => void
   onMoveProject?: (id: string, newStatus: ProjectStatus) => void
 }
@@ -42,6 +43,7 @@ const priorityColors: Record<Priority, string> = {
 export function ProjectKanban({
   projects,
   onProjectClick,
+  onEditProject,
   onAddProject,
   onMoveProject,
 }: ProjectKanbanProps) {
@@ -88,6 +90,7 @@ export function ProjectKanban({
                     key={project.id}
                     project={project}
                     onClick={() => onProjectClick?.(project.id)}
+                    onEdit={() => onEditProject?.(project.id)}
                     onMove={(newStatus) => onMoveProject?.(project.id, newStatus)}
                   />
                 ))
@@ -103,10 +106,11 @@ export function ProjectKanban({
 interface ProjectCardProps {
   project: ProjectWithClient
   onClick?: () => void
+  onEdit?: () => void
   onMove?: (status: ProjectStatus) => void
 }
 
-function ProjectCard({ project, onClick, onMove }: ProjectCardProps) {
+function ProjectCard({ project, onClick, onEdit, onMove }: ProjectCardProps) {
   const taskCount = project._count?.tasks ?? 0
 
   return (
@@ -135,7 +139,14 @@ function ProjectCard({ project, onClick, onMove }: ProjectCardProps) {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem>Edit</DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={(e) => {
+                e.stopPropagation()
+                onEdit?.()
+              }}
+            >
+              Edit
+            </DropdownMenuItem>
             {stages.map((stage) => (
               <DropdownMenuItem
                 key={stage.id}

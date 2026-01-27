@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import { Plus, Filter, Search, Loader2 } from 'lucide-react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -32,7 +33,7 @@ export default function TasksPage() {
   if (categoryFilter) filter.category = categoryFilter
 
   const { data: tasks = [], isLoading } = useTasks(filter)
-  const { data: goals = [] } = useGoals({ type: 'MONTHLY', completed: 'false' })
+  const { data: goals = [] } = useGoals({ completed: 'false' })
   const createTask = useCreateTask()
   const deleteTask = useDeleteTask()
 
@@ -59,21 +60,33 @@ export default function TasksPage() {
       ? new Date(data.scheduledDate + 'T00:00:00').toISOString()
       : undefined
 
-    createTask.mutate({
-      title: data.title,
-      description: data.description || undefined,
-      category: data.category,
-      priority: data.priority,
-      energyLevel: data.energyLevel,
-      timeBlockMinutes: data.timeBlockMinutes,
-      scheduledDate,
-      scheduledTime: data.scheduledTime || undefined,
-      goalId: data.goalId || undefined,
-    })
+    createTask.mutate(
+      {
+        title: data.title,
+        description: data.description || undefined,
+        category: data.category,
+        priority: data.priority,
+        energyLevel: data.energyLevel,
+        timeBlockMinutes: data.timeBlockMinutes,
+        scheduledDate,
+        scheduledTime: data.scheduledTime || undefined,
+        goalId: data.goalId || undefined,
+      },
+      {
+        onSuccess: () => {
+          toast.success('Task created')
+          setTaskFormOpen(false)
+        },
+        onError: (err) => toast.error(err.message || 'Failed to create task'),
+      }
+    )
   }
 
   function handleDeleteTask(id: string) {
-    deleteTask.mutate(id)
+    deleteTask.mutate(id, {
+      onSuccess: () => toast.success('Task deleted'),
+      onError: (err) => toast.error(err.message || 'Failed to delete task'),
+    })
   }
 
   return (

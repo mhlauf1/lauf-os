@@ -1,13 +1,15 @@
 'use client'
 
-import { use } from 'react'
+import { use, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, Trash2, ExternalLink, Phone, Mail, Loader2 } from 'lucide-react'
+import { toast } from 'sonner'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { HealthScoreBadge } from '@/components/modules/clients/HealthScoreBadge'
+import { ConfirmDeleteDialog } from '@/components/shared/ConfirmDeleteDialog'
 import { useClient, useDeleteClient } from '@/hooks/use-clients'
 import type { Client, HealthScore, ClientStatus, ProjectStatus } from '@prisma/client'
 
@@ -44,10 +46,15 @@ export default function ClientDetailPage({ params }: ClientDetailPageProps) {
   const router = useRouter()
   const { data: client, isLoading, error } = useClient(id)
   const deleteClient = useDeleteClient()
+  const [deleteOpen, setDeleteOpen] = useState(false)
 
   function handleDelete() {
     deleteClient.mutate(id, {
-      onSuccess: () => router.push('/clients'),
+      onSuccess: () => {
+        toast.success('Client deleted')
+        router.push('/clients')
+      },
+      onError: (err) => toast.error(err.message || 'Failed to delete client'),
     })
   }
 
@@ -111,7 +118,7 @@ export default function ClientDetailPage({ params }: ClientDetailPageProps) {
           <Button
             variant="outline"
             className="text-red-400 hover:text-red-500"
-            onClick={handleDelete}
+            onClick={() => setDeleteOpen(true)}
             disabled={deleteClient.isPending}
           >
             <Trash2 className="mr-2 h-4 w-4" />
@@ -287,6 +294,15 @@ export default function ClientDetailPage({ params }: ClientDetailPageProps) {
           )}
         </CardContent>
       </Card>
+
+      <ConfirmDeleteDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title="Delete client?"
+        description="This will permanently delete this client and all associated data. This action cannot be undone."
+        isPending={deleteClient.isPending}
+        onConfirm={handleDelete}
+      />
     </div>
   )
 }
