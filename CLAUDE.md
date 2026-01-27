@@ -73,8 +73,8 @@ src/
 │   └── api/                # API routes
 │       ├── tasks/          # GET, POST + [id] PATCH, DELETE
 │       ├── activities/     # GET, POST + [id] PATCH, DELETE
-│       ├── clients/
-│       ├── projects/
+│       ├── clients/        # GET, POST + [id] GET, PATCH, DELETE
+│       ├── projects/       # GET, POST + [id] GET, PATCH, DELETE
 │       └── goals/          # GET, POST + [id] PATCH
 ├── components/
 │   ├── ui/                 # shadcn/ui primitives
@@ -90,7 +90,7 @@ src/
 │   ├── ai/                 # AI service clients
 │   ├── validations/        # Zod schemas
 │   └── utils/              # Utility functions
-├── hooks/                  # React hooks (use-tasks, use-activities, use-goals, use-auth)
+├── hooks/                  # React hooks (use-tasks, use-activities, use-goals, use-clients, use-projects, use-auth)
 ├── stores/                 # Zustand stores
 ├── types/                  # TypeScript types
 └── config/                 # App configuration
@@ -243,8 +243,9 @@ Clients have a health score (GREEN/YELLOW/RED) based on:
 ### State Management
 
 - **Server state** (React Query): Tasks, activities, clients, projects, goals
-  - Hooks: `use-tasks.ts`, `use-activities.ts`, `use-goals.ts`
+  - Hooks: `use-tasks.ts`, `use-activities.ts`, `use-goals.ts`, `use-clients.ts`, `use-projects.ts`
   - Each hook exports `useX`, `useCreateX`, `useUpdateX`, `useDeleteX`
+  - `use-clients.ts` and `use-projects.ts` also export `useClient(id)` and `useProject(id)` for single-record fetching
   - Mutations auto-invalidate related query caches
 - **Client state** (Zustand): UI state, filters, drafts
 
@@ -279,7 +280,7 @@ Clients have a health score (GREEN/YELLOW/RED) based on:
 
 ## Current Phase
 
-**Phase 1: Foundation + Daily Driver**
+**Phase 1: Foundation + Daily Driver** (Complete)
 - [x] Prisma setup with full schema
 - [x] Command Center routes and components
 - [x] Client CRM routes and components
@@ -293,5 +294,22 @@ Clients have a health score (GREEN/YELLOW/RED) based on:
 - [x] Day Builder dashboard (timeline + goals + catalog)
 - [x] Task completion auto-increments goal progress + activity usage
 - [x] TaskForm "from activity" quick-create mode with goal linking
+- [x] Tasks page wired with status/category filters, search, and create dialog
+- [x] Goals page wired with type filters, real stats, completion toggle, goal creation
+- [x] GoalsPanel dashboard toggle (click to mark goals complete/incomplete)
+- [x] Calendar week view with date-range filtering, task rendering, week navigation
 - [ ] Database migration (waiting for credentials)
-- [ ] Calendar view with week navigation
+
+**Phase 2: Client CRM Wire-Up** (Complete)
+- [x] React Query hooks for clients (`use-clients.ts`) and projects (`use-projects.ts`)
+- [x] Individual API routes: `/api/clients/[id]` (GET, PATCH, DELETE) and `/api/projects/[id]` (GET, PATCH, DELETE)
+- [x] Clients list page with health stats, debounced search, status filter tabs
+- [x] Client create page with full form and redirect on success
+- [x] Client detail page with overview, contact info, linked projects, delete
+- [x] Projects page with Kanban board rendering real data, status change via drag
+- [x] Project detail page with overview, links, tasks list, delete
+
+**Next Up:**
+- [ ] Database migration (waiting for credentials)
+- [ ] Creative Library (Phase 3)
+- [ ] Intel Feed + AI Hub (Phase 3)

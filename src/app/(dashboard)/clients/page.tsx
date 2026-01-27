@@ -1,10 +1,13 @@
 'use client'
 
-import { useState } from 'react'
-import { Plus, Search, Filter, Users, AlertCircle, CheckCircle } from 'lucide-react'
+import { useState, useMemo, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { Plus, Search, Users, AlertCircle, CheckCircle, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { ClientCard } from '@/components/modules/clients/ClientCard'
+import { useClients, useDeleteClient } from '@/hooks/use-clients'
 
 const statusFilters = [
   { id: 'all', label: 'All Clients' },
@@ -14,8 +17,30 @@ const statusFilters = [
 ]
 
 export default function ClientsPage() {
+  const router = useRouter()
   const [activeFilter, setActiveFilter] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+
+  // Debounce search for server-side filtering
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchQuery), 300)
+    return () => clearTimeout(timer)
+  }, [searchQuery])
+
+  const filter: Record<string, string> = {}
+  if (activeFilter !== 'all') filter.status = activeFilter
+  if (debouncedSearch) filter.search = debouncedSearch
+
+  const { data: clients = [], isLoading } = useClients(filter)
+  const deleteClient = useDeleteClient()
+
+  const healthStats = useMemo(() => {
+    const green = clients.filter((c) => c.healthScore === 'GREEN').length
+    const yellow = clients.filter((c) => c.healthScore === 'YELLOW').length
+    const red = clients.filter((c) => c.healthScore === 'RED').length
+    return { green, yellow, red }
+  }, [clients])
 
   return (
     <div className="space-y-6">
@@ -27,7 +52,7 @@ export default function ClientsPage() {
             Manage your client relationships
           </p>
         </div>
-        <Button>
+        <Button onClick={() => router.push('/clients/new')}>
           <Plus className="mr-2 h-4 w-4" />
           Add Client
         </Button>
@@ -43,7 +68,7 @@ export default function ClientsPage() {
             <CheckCircle className="h-4 w-4 text-green-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-400">0</div>
+            <div className="text-2xl font-bold text-green-400">{healthStats.green}</div>
             <p className="text-xs text-text-tertiary">GREEN status</p>
           </CardContent>
         </Card>
@@ -55,7 +80,7 @@ export default function ClientsPage() {
             <AlertCircle className="h-4 w-4 text-yellow-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-yellow-400">0</div>
+            <div className="text-2xl font-bold text-yellow-400">{healthStats.yellow}</div>
             <p className="text-xs text-text-tertiary">YELLOW status</p>
           </CardContent>
         </Card>
@@ -67,7 +92,7 @@ export default function ClientsPage() {
             <AlertCircle className="h-4 w-4 text-red-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-400">0</div>
+            <div className="text-2xl font-bold text-red-400">{healthStats.red}</div>
             <p className="text-xs text-text-tertiary">RED status</p>
           </CardContent>
         </Card>
@@ -84,9 +109,6 @@ export default function ClientsPage() {
             className="pl-9"
           />
         </div>
-        <Button variant="outline" size="icon">
-          <Filter className="h-4 w-4" />
-        </Button>
       </div>
 
       {/* Status Filter Tabs */}
@@ -107,27 +129,53 @@ export default function ClientsPage() {
       </div>
 
       {/* Client List */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Client Directory</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col items-center justify-center py-12 text-center">
-            <div className="rounded-full bg-surface-elevated p-4 mb-4">
-              <Users className="h-8 w-8 text-text-tertiary" />
+      {isLoading ? (
+        <Card>
+          <CardContent className="py-12">
+            <div className="flex flex-col items-center justify-center">
+              <Loader2 className="h-8 w-8 animate-spin text-text-tertiary" />
+              <p className="mt-2 text-sm text-text-tertiary">Loading clients...</p>
             </div>
-            <h3 className="text-lg font-medium mb-2">No clients yet</h3>
-            <p className="text-sm text-text-secondary mb-4 max-w-sm">
-              Add your first client to start tracking relationships, projects,
-              and opportunities.
-            </p>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Add Your First Client
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      ) : clients.length === 0 ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Client Directory</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <div className="rounded-full bg-surface-elevated p-4 mb-4">
+                <Users className="h-8 w-8 text-text-tertiary" />
+              </div>
+              <h3 className="text-lg font-medium mb-2">
+                {debouncedSearch ? 'No matching clients' : 'No clients yet'}
+              </h3>
+              <p className="text-sm text-text-secondary mb-4 max-w-sm">
+                {debouncedSearch
+                  ? 'Try adjusting your search query.'
+                  : 'Add your first client to start tracking relationships, projects, and opportunities.'}
+              </p>
+              {!debouncedSearch && (
+                <Button onClick={() => router.push('/clients/new')}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Your First Client
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {clients.map((client) => (
+            <ClientCard
+              key={client.id}
+              client={client}
+              onDelete={(id) => deleteClient.mutate(id)}
+            />
+          ))}
+        </div>
+      )}
     </div>
   )
 }

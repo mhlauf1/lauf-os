@@ -12,6 +12,7 @@ interface GoalsPanelProps {
   onTypeChange?: (type: GoalType) => void
   onGoalClick?: (id: string) => void
   onAddGoal?: () => void
+  onToggleComplete?: (id: string, completed: boolean) => void
 }
 
 const goalTypes: { value: GoalType; label: string }[] = [
@@ -26,6 +27,7 @@ export function GoalsPanel({
   onTypeChange,
   onGoalClick,
   onAddGoal,
+  onToggleComplete,
 }: GoalsPanelProps) {
   const filteredGoals = goals.filter((g) => g.type === activeType)
   const completedCount = filteredGoals.filter((g) => g.completedAt).length
@@ -93,6 +95,7 @@ export function GoalsPanel({
                 key={goal.id}
                 goal={goal}
                 onClick={() => onGoalClick?.(goal.id)}
+                onToggleComplete={onToggleComplete}
               />
             ))
           )}
@@ -105,9 +108,10 @@ export function GoalsPanel({
 interface GoalItemProps {
   goal: Goal
   onClick?: () => void
+  onToggleComplete?: (id: string, completed: boolean) => void
 }
 
-function GoalItem({ goal, onClick }: GoalItemProps) {
+function GoalItem({ goal, onClick, onToggleComplete }: GoalItemProps) {
   const isCompleted = !!goal.completedAt
   const hasTarget = goal.targetValue !== null
   const progress = hasTarget
@@ -120,8 +124,7 @@ function GoalItem({ goal, onClick }: GoalItemProps) {
     : 0
 
   return (
-    <button
-      onClick={onClick}
+    <div
       className={cn(
         'w-full rounded-lg border border-border p-3 text-left transition-colors',
         'hover:border-border/80 hover:bg-surface-elevated',
@@ -129,12 +132,20 @@ function GoalItem({ goal, onClick }: GoalItemProps) {
       )}
     >
       <div className="flex items-start gap-3">
-        {isCompleted ? (
-          <CheckCircle className="h-4 w-4 mt-0.5 text-green-400" />
-        ) : (
-          <Circle className="h-4 w-4 mt-0.5 text-text-tertiary" />
-        )}
-        <div className="flex-1 min-w-0">
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            onToggleComplete?.(goal.id, !isCompleted)
+          }}
+          className="mt-0.5 transition-colors hover:opacity-80"
+        >
+          {isCompleted ? (
+            <CheckCircle className="h-4 w-4 text-green-400" />
+          ) : (
+            <Circle className="h-4 w-4 text-text-tertiary hover:text-accent" />
+          )}
+        </button>
+        <button onClick={onClick} className="flex-1 min-w-0 text-left">
           <p
             className={cn(
               'font-medium text-sm',
@@ -162,11 +173,11 @@ function GoalItem({ goal, onClick }: GoalItemProps) {
               </div>
             </div>
           )}
-        </div>
+        </button>
         {!isCompleted && progress > 0 && (
           <TrendingUp className="h-4 w-4 text-green-400" />
         )}
       </div>
-    </button>
+    </div>
   )
 }

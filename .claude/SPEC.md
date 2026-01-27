@@ -17,8 +17,9 @@
 
 |             |                    |
 | ----------- | ------------------ |
-| **Version** | 1.0                |
+| **Version** | 1.1                |
 | **Created** | January 2025       |
+| **Updated** | January 2026       |
 | **Status**  | Active Development |
 
 ---
@@ -575,11 +576,13 @@ enum LibraryItemType {
 | **Day Builder**        | Dashboard with timeline + goals + activity catalog            | Done   |
 | **Activity Catalog**   | Grid of reusable activities to build your day from            | Done   |
 | **Daily Timeline**     | Hour-by-hour view with 90-min blocks, color-coded by category | Done   |
-| **Goals Panel**        | Monthly goals with auto-incrementing progress                 | Done   |
+| **Goals Panel**        | Monthly goals with auto-incrementing progress + toggle        | Done   |
 | **Quick-Add from Activity** | Click activity → pre-filled dialog → block created       | Done   |
 | **Goal Linking**       | Link blocks to goals for auto-progress tracking               | Done   |
 | **Stats Cards**        | Real-time blocks completed, goal progress, activity count     | Done   |
-| **Weekly Planner**     | 7-day grid with drag-drop scheduling                          | Planned |
+| **Tasks Page**         | Full task queue with status tabs, category filter, search     | Done   |
+| **Goals Page**         | Goal management with type filters, stats, completion toggle   | Done   |
+| **Calendar Week View** | 7-day grid with tasks in time slots, week navigation          | Done   |
 | **Context Preloader**  | Linked assets and project info per task                       | Planned |
 | **Prep Mode**          | AI suggests tomorrow's schedule                               | Planned |
 | **Weekly Review**      | What got done, what worked, next week planning                | Planned |
@@ -588,12 +591,13 @@ enum LibraryItemType {
 
 - `DailyTimeline` - Main timeline view with time slots
 - `TimeBlock` - 90-min block card with play/complete/pause actions
-- `TaskCard` - Task in queue
+- `TaskCard` - Task in queue with category badge, priority, energy level
 - `TaskForm` - Create/edit task with "from activity" quick-create mode + goal linking
 - `ActivityCatalog` - Activity picker grid for Day Builder
 - `ActivityForm` - Create/edit activity dialog
-- `GoalsPanel` - Goals sidebar with progress tracking
-- `WeekGrid` - Weekly calendar (planned)
+- `GoalsPanel` - Goals sidebar with progress tracking + clickable completion toggle
+- `GoalFormDialog` - Create goals of any type (Daily/Weekly/Monthly/Yearly)
+- `CalendarPage` - Week view with day columns, time slots, task rendering
 - `PrepMode` - AI suggestions (planned)
 
 ### AI Integration
@@ -618,15 +622,17 @@ enum LibraryItemType {
 
 ### Features
 
-| Feature                 | Description                                                |
-| ----------------------- | ---------------------------------------------------------- |
-| **Client Directory**    | Cards with health score, status, last contact              |
-| **Client Detail**       | Overview, projects, assets, credentials, finances          |
-| **Project Pipeline**    | Kanban board (Planning → Design → Dev → Review → Launched) |
-| **Asset Vault**         | All files organized by type                                |
-| **Credential Vault**    | Encrypted password storage                                 |
-| **Opportunity Tracker** | AI-generated and manual opportunities                      |
-| **Health Score**        | Auto-calculated based on payment, communication, status    |
+| Feature                 | Description                                                | Status  |
+| ----------------------- | ---------------------------------------------------------- | ------- |
+| **Client Directory**    | Cards with health score, status, search, filter            | Done    |
+| **Client Create**       | Full form with all fields, redirect on success             | Done    |
+| **Client Detail**       | Overview, contact info, linked projects, delete            | Done    |
+| **Project Pipeline**    | Kanban board (Planning → Design → Dev → Review → Launched) | Done    |
+| **Project Detail**      | Overview, links, tasks list, delete                        | Done    |
+| **Asset Vault**         | All files organized by type                                | Planned |
+| **Credential Vault**    | Encrypted password storage                                 | Planned |
+| **Opportunity Tracker** | AI-generated and manual opportunities                      | Planned |
+| **Health Score**        | Auto-calculated based on payment, communication, status    | Planned |
 
 ### Health Score System
 
@@ -645,14 +651,14 @@ enum LibraryItemType {
 
 ### UI Components
 
-- `ClientCard` - Client in directory
-- `ClientForm` - Create/edit client
-- `ClientDetail` - Full client view
-- `ProjectKanban` - Pipeline board
-- `AssetGrid` - Asset gallery
-- `CredentialVault` - Password manager
-- `HealthScoreBadge` - Visual indicator
-- `OpportunityCard` - Opportunity item
+- `ClientCard` - Client card in directory grid with health badge, status, contact info
+- `ClientForm` - Create client (full form: name, company, email, phone, industry, URLs, financials, notes)
+- `ClientDetail` - Full client view with overview, contact, and linked projects
+- `ProjectKanban` - Pipeline board with drag-to-move between status columns
+- `HealthScoreBadge` - Visual GREEN/YELLOW/RED indicator
+- `AssetGrid` - Asset gallery (planned)
+- `CredentialVault` - Password manager (planned)
+- `OpportunityCard` - Opportunity item (planned)
 
 ### AI Integration
 
@@ -945,29 +951,38 @@ enum LibraryItemType {
 
 ### Week 1: Project Setup
 
-- [ ] Initialize Next.js 14 with TypeScript
-- [ ] Configure Tailwind + shadcn/ui
-- [ ] Set up Supabase (Auth, DB, Storage)
-- [ ] Configure Prisma with full schema
-- [ ] Run initial migration
-- [ ] Implement auth flow
+- [x] Initialize Next.js with TypeScript
+- [x] Configure Tailwind + shadcn/ui
+- [x] Set up Supabase (Auth, DB, Storage)
+- [x] Configure Prisma with full schema
+- [ ] Run initial migration (waiting for credentials)
+- [x] Implement auth flow
 
 ### Week 2: Dashboard Foundation
 
-- [ ] Build dashboard layout with sidebar
-- [ ] Create navigation
-- [ ] Build shared UI components
-- [ ] Set up Zustand stores
-- [ ] Configure React Query
+- [x] Build dashboard layout with sidebar
+- [x] Create navigation
+- [x] Build shared UI components
+- [x] Set up Zustand stores
+- [x] Configure React Query
 
 ### Week 3: Command Center + Basic Clients
 
-- [ ] Command Center: Daily timeline
-- [ ] Command Center: Task CRUD
-- [ ] Command Center: Time blocks
-- [ ] Client CRM: Client list
-- [ ] Client CRM: Client CRUD
-- [ ] Client CRM: Project kanban
+- [x] Command Center: Daily timeline + Day Builder dashboard
+- [x] Command Center: Task CRUD (API + hooks + UI)
+- [x] Command Center: Time blocks
+- [x] Command Center: Activity Catalog + goal linking
+- [x] Command Center: Tasks page (status/category filters, search, create dialog)
+- [x] Command Center: Goals page (type filters, stats, completion toggle, create dialog)
+- [x] Command Center: Calendar week view (date-range filtering, task rendering, navigation)
+- [x] Command Center: GoalsPanel toggle on dashboard
+- [x] Client CRM: Client list with health stats, search, status filters
+- [x] Client CRM: Client create form with all fields
+- [x] Client CRM: Client detail page with overview, contact, projects
+- [x] Client CRM: Project Kanban board with real data + status changes
+- [x] Client CRM: Project detail page with overview, links, tasks
+- [x] Client CRM: React Query hooks (use-clients, use-projects)
+- [x] Client CRM: Individual API routes (/api/clients/[id], /api/projects/[id])
 
 ## 7.3 Phase 2: Asset Management
 
@@ -1239,12 +1254,25 @@ See `/prisma/schema.prisma` for full schema with all models:
 
 ## Appendix B: API Routes
 
+### Implemented
+
+| Method              | Route                  | Description                                                        |
+| ------------------- | ---------------------- | ------------------------------------------------------------------ |
+| GET/POST            | `/api/tasks`           | List (filter: date, dateFrom/dateTo, status, category) / Create    |
+| PATCH/DELETE         | `/api/tasks/[id]`      | Update/Delete task (auto-increments goal + activity on completion)  |
+| GET/POST            | `/api/activities`      | List/Create activities                                             |
+| PATCH/DELETE         | `/api/activities/[id]` | Update/Delete activity                                             |
+| GET/POST            | `/api/goals`           | List (filter: type, completed) / Create                            |
+| PATCH               | `/api/goals/[id]`      | Update goal                                                        |
+| GET/POST            | `/api/clients`         | List (filter: status, healthScore, search) / Create                |
+| GET/PATCH/DELETE     | `/api/clients/[id]`    | Get (with projects, opportunities) / Update / Delete               |
+| GET/POST            | `/api/projects`        | List (filter: status, clientId) / Create                           |
+| GET/PATCH/DELETE     | `/api/projects/[id]`   | Get (with client, tasks, assets) / Update / Delete                 |
+
+### Planned
+
 | Method         | Route                        | Description         |
 | -------------- | ---------------------------- | ------------------- |
-| GET/POST       | `/api/clients`               | List/Create clients |
-| GET/PUT/DELETE | `/api/clients/[id]`          | Single client       |
-| GET/POST       | `/api/projects`              | Projects            |
-| GET/POST       | `/api/tasks`                 | Tasks               |
 | POST           | `/api/assets/upload`         | Upload asset        |
 | GET/POST       | `/api/library`               | Library items       |
 | GET/POST       | `/api/health/workouts`       | Workouts            |
@@ -1305,9 +1333,9 @@ See `/prisma/schema.prisma` for full schema with all models:
 
 ---
 
-**Version:** 1.0  
-**Last Updated:** January 2025  
-**Status:** Ready for Development
+**Version:** 1.1
+**Last Updated:** January 2026
+**Status:** Phase 1 Complete, Phase 2 CRM Wire-Up Complete
 
 ---
 
