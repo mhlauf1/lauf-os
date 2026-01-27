@@ -17,7 +17,7 @@
 
 |             |                    |
 | ----------- | ------------------ |
-| **Version** | 1.2                |
+| **Version** | 1.3                |
 | **Created** | January 2025       |
 | **Updated** | January 2026       |
 | **Status**  | Active Development |
@@ -583,18 +583,22 @@ enum LibraryItemType {
 | **Tasks Page**         | Full task queue with status tabs, category filter, search     | Done   |
 | **Goals Page**         | Goal management with type filters, stats, completion toggle   | Done   |
 | **Calendar Week View** | 7-day grid with tasks in time slots, week navigation          | Done   |
+| **Drag-and-Drop**      | Drag activities from sidebar catalog onto empty timeline slots | Done   |
+| **CommandSidebar**     | Tabbed sidebar with Goals + Activities tabs                   | Done   |
+| **TaskForm Catalog Mode** | "From Catalog" / "Manual" tabs for quick activity picking  | Done   |
 | **Context Preloader**  | Linked assets and project info per task                       | Planned |
 | **Prep Mode**          | AI suggests tomorrow's schedule                               | Planned |
 | **Weekly Review**      | What got done, what worked, next week planning                | Planned |
 
 ### UI Components
 
-- `DailyTimeline` - Main timeline view with time slots
+- `DailyTimeline` - Main timeline view with time slots + droppable empty slots (`@dnd-kit/core`)
 - `TimeBlock` - 90-min block card with play/complete/pause actions
 - `TaskCard` - Task in queue with category badge, priority, energy level
-- `TaskForm` - Create/edit task with "from activity" quick-create mode + goal linking
-- `ActivityCatalog` - Activity picker grid for Day Builder
+- `TaskForm` - Create/edit task with "from activity" mode, "From Catalog" / "Manual" tabs, goal linking
+- `ActivityCatalog` - Activity picker grid with draggable cards (`useDraggable`)
 - `ActivityForm` - Create/edit activity dialog
+- `CommandSidebar` - Tabbed sidebar (Goals / Activities tabs) for Day Builder
 - `GoalsPanel` - Goals sidebar with progress tracking + clickable completion toggle
 - `GoalFormDialog` - Create goals of any type (Daily/Weekly/Monthly/Yearly) with type picker
 - `CalendarPage` - Week view with day columns, time slots, task rendering
@@ -1001,14 +1005,29 @@ enum LibraryItemType {
 - [x] Create reusable ConfirmDeleteDialog shared component
 - [x] Fix cross-model cache invalidation (delete task → goals/activities, delete client → projects, etc.)
 
-## 7.3 Phase 2: Asset Management
+## 7.3 Phase 2: Creative Library + Day Builder UX Overhaul
 
+### Creative Library (Complete)
+- [x] Zod validation schemas (`library.schema.ts`)
+- [x] API routes: `/api/library` (GET, POST) + `/api/library/[id]` (GET, PATCH, DELETE)
+- [x] React Query hooks (`use-library.ts`): useLibrary, useLibraryItem, CRUD mutations
+- [x] Library type config with colors, icons, labels per type
+- [x] Components: LibraryItemCard, LibraryGrid, LibraryItemForm, TagInput
+- [x] Library list page with stats, debounced search, type filter tabs
+- [x] Library detail page with type-specific fields, external links, edit/delete
+- [x] Navigation: Library moved from Coming Soon to "Creative" nav group
+
+### Day Builder UX Overhaul (Complete)
+- [x] `@dnd-kit/core` for drag-and-drop (draggable activities, droppable timeline slots)
+- [x] CommandSidebar: tabbed sidebar with Goals + Activities tabs
+- [x] DragOverlay for visual drag feedback
+- [x] TaskForm "From Catalog" / "Manual" two-tab mode
+- [x] Fixed timezone bug in Prisma `@db.Date` calendar date parsing
+- [x] `ensureUser` helper for API routes
+
+### Remaining
 - [ ] Configure Supabase Storage
 - [ ] Build file upload system
-- [ ] Library: Inspiration board
-- [ ] Library: Template library
-- [ ] Library: AI image vault
-- [ ] Library: Progress dashboard
 - [ ] Client assets integration
 
 ## 7.4 Phase 3: Intelligence Layer
@@ -1285,13 +1304,14 @@ See `/prisma/schema.prisma` for full schema with all models:
 | GET/PATCH/DELETE     | `/api/clients/[id]`    | Get (with projects, opportunities) / Update / Delete               |
 | GET/POST            | `/api/projects`        | List (filter: status, clientId) / Create                           |
 | GET/PATCH/DELETE     | `/api/projects/[id]`   | Get (with client, tasks, assets) / Update / Delete                 |
+| GET/POST            | `/api/library`         | List (filter: type, search) / Create                               |
+| GET/PATCH/DELETE     | `/api/library/[id]`    | Get / Update / Delete library item                                 |
 
 ### Planned
 
 | Method         | Route                        | Description         |
 | -------------- | ---------------------------- | ------------------- |
 | POST           | `/api/assets/upload`         | Upload asset        |
-| GET/POST       | `/api/library`               | Library items       |
 | GET/POST       | `/api/health/workouts`       | Workouts            |
 | POST           | `/api/health/checkins`       | Check-ins           |
 | GET/POST       | `/api/finances/transactions` | Transactions        |
@@ -1310,8 +1330,10 @@ See `/prisma/schema.prisma` for full schema with all models:
 
 ### Command Center
 
-- DailyTimeline, TimeBlock, TaskCard, TaskForm
-- WeekGrid, GoalsPanel, PrepMode
+- DailyTimeline (with droppable EmptySlot), TimeBlock, TaskCard, TaskForm (with catalog picker)
+- ActivityCatalog (with draggable cards), ActivityForm, CommandSidebar
+- GoalsPanel (with GoalsPanelContent), GoalFormDialog
+- WeekGrid, PrepMode (planned)
 
 ### Clients
 
@@ -1321,8 +1343,9 @@ See `/prisma/schema.prisma` for full schema with all models:
 
 ### Library
 
-- InspirationCard, TemplateCard, AIImageCard
-- IdeaCard, LibraryGrid, TagFilter, ProgressChart
+- LibraryItemCard, LibraryGrid, LibraryItemForm, TagInput
+- InspirationCard, TemplateCard, AIImageCard (planned)
+- ProgressChart (planned)
 
 ### Health
 
@@ -1350,9 +1373,9 @@ See `/prisma/schema.prisma` for full schema with all models:
 
 ---
 
-**Version:** 1.2
+**Version:** 1.3
 **Last Updated:** January 2026
-**Status:** Phase 1 Complete, Phase 2 CRM Wire-Up Complete, Phase 1.5 Hardening Complete
+**Status:** Phase 1 Complete, Phase 1.5 Hardening Complete, Phase 2 Creative Library + Day Builder UX Overhaul Complete
 
 ---
 

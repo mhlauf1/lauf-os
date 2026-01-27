@@ -27,6 +27,7 @@ LAUF OS is a **Personal Operating System** - a comprehensive command center for 
 | **Storage** | Supabase Storage |
 | **Deployment** | Vercel |
 | **Validation** | Zod |
+| **Drag & Drop** | @dnd-kit/core |
 | **AI** | Claude API (primary), Gemini (long context) |
 
 ## Commands
@@ -69,18 +70,21 @@ src/
 │   │   ├── command/        # Command Center (tasks, calendar, goals)
 │   │   ├── clients/        # Client CRM
 │   │   ├── projects/       # Project pipeline
+│   │   ├── library/        # Creative Library (list + detail)
 │   │   └── settings/       # User settings
 │   └── api/                # API routes
 │       ├── tasks/          # GET, POST + [id] PATCH, DELETE
 │       ├── activities/     # GET, POST + [id] PATCH, DELETE
 │       ├── clients/        # GET, POST + [id] GET, PATCH, DELETE
 │       ├── projects/       # GET, POST + [id] GET, PATCH, DELETE
+│       ├── library/        # GET, POST + [id] GET, PATCH, DELETE
 │       └── goals/          # GET, POST + [id] PATCH
 ├── components/
 │   ├── ui/                 # shadcn/ui primitives
 │   ├── modules/            # Module-specific components
-│   │   ├── command/        # TimeBlock, TaskCard, TaskForm, ActivityCatalog, ActivityForm, etc.
-│   │   └── clients/        # ClientCard, HealthScoreBadge, etc.
+│   │   ├── command/        # TimeBlock, TaskCard, TaskForm, ActivityCatalog, CommandSidebar, DailyTimeline, etc.
+│   │   ├── clients/        # ClientCard, HealthScoreBadge, etc.
+│   │   └── library/        # LibraryItemCard, LibraryGrid, LibraryItemForm, TagInput
 │   ├── providers.tsx       # QueryClientProvider (React Query)
 │   ├── layouts/            # Layout components
 │   └── shared/             # Shared components
@@ -90,12 +94,13 @@ src/
 │   ├── ai/                 # AI service clients
 │   ├── validations/        # Zod schemas
 │   └── utils/              # Utility functions
-├── hooks/                  # React hooks (use-tasks, use-activities, use-goals, use-clients, use-projects, use-auth)
+├── hooks/                  # React hooks (use-tasks, use-activities, use-goals, use-clients, use-projects, use-library, use-auth)
 ├── stores/                 # Zustand stores
 ├── types/                  # TypeScript types
 └── config/                 # App configuration
     ├── navigation.ts       # Sidebar navigation
     ├── categories.ts       # Task categories with colors
+    ├── library.ts          # Library type config (colors, icons, labels)
     └── site.ts             # Site metadata
 ```
 
@@ -242,8 +247,8 @@ Clients have a health score (GREEN/YELLOW/RED) based on:
 
 ### State Management
 
-- **Server state** (React Query): Tasks, activities, clients, projects, goals
-  - Hooks: `use-tasks.ts`, `use-activities.ts`, `use-goals.ts`, `use-clients.ts`, `use-projects.ts`
+- **Server state** (React Query): Tasks, activities, clients, projects, goals, library
+  - Hooks: `use-tasks.ts`, `use-activities.ts`, `use-goals.ts`, `use-clients.ts`, `use-projects.ts`, `use-library.ts`
   - Each hook exports `useX`, `useCreateX`, `useUpdateX`, `useDeleteX`
   - `use-clients.ts` and `use-projects.ts` also export `useClient(id)` and `useProject(id)` for single-record fetching
   - Mutations auto-invalidate related query caches
@@ -327,7 +332,27 @@ Clients have a health score (GREEN/YELLOW/RED) based on:
 - [x] Shared component: `src/components/shared/ConfirmDeleteDialog.tsx`
 - [x] Installed shadcn/ui AlertDialog component
 
+**Phase 2: Creative Library** (Complete)
+- [x] Zod validation schemas (`src/lib/validations/library.schema.ts`)
+- [x] API routes: `/api/library` (GET, POST) + `/api/library/[id]` (GET, PATCH, DELETE)
+- [x] React Query hooks (`use-library.ts`): useLibrary, useLibraryItem, CRUD mutations
+- [x] Library type config (`src/config/library.ts`): colors, icons, labels per LibraryItemType
+- [x] Components: LibraryItemCard, LibraryGrid, LibraryItemForm, TagInput
+- [x] Library list page with stats, debounced search, type filter tabs, grid display
+- [x] Library detail page with type-specific fields, external links, edit/delete
+- [x] Navigation: Library moved from Coming Soon to new "Creative" nav group
+
+**Day Builder UX Overhaul** (Complete)
+- [x] Installed `@dnd-kit/core` for drag-and-drop
+- [x] CommandSidebar component: tabbed sidebar (Goals + Activities tabs) replaces separate panels
+- [x] Draggable activities: `useDraggable` on ActivityCard in sidebar catalog
+- [x] Droppable timeline slots: `useDroppable` on EmptySlot in DailyTimeline with visual feedback
+- [x] DndContext + DragOverlay wired into Command Center dashboard page
+- [x] Drag activity from sidebar → drop on empty slot → task auto-created with toast confirmation
+- [x] TaskForm two-tab mode: "From Catalog" / "Manual" tabs when activities available
+- [x] Extracted GoalsPanelContent + ActivityCatalogContent for reuse in sidebar
+- [x] Fixed timezone bug in calendar date parsing (Prisma `@db.Date` → local date conversion)
+
 **Next Up:**
 - [ ] Database migration (waiting for credentials)
-- [ ] Creative Library (Phase 2)
 - [ ] Intel Feed + AI Hub (Phase 3)

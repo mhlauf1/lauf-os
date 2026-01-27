@@ -95,7 +95,7 @@ The MVP focuses on two core modules:
 - [x] Display tasks in DailyTimeline by scheduled time
 - [x] Implement task status transitions (TODO → IN_PROGRESS → DONE)
 - [ ] Add task category filtering
-- [ ] Implement drag-and-drop reordering
+- [x] Implement drag-and-drop from Activity Catalog to timeline slots (`@dnd-kit/core`)
 - [x] Add task completion (mark done, record completedAt)
 - [x] Delete task from timeline (TimeBlock delete button)
 
@@ -118,6 +118,16 @@ The MVP focuses on two core modules:
 - [ ] Drag tasks to different days
 - [x] Show task counts per day
 - [x] Navigate between weeks
+
+### Day Builder UX Overhaul
+- [x] CommandSidebar: tabbed sidebar with Goals + Activities tabs
+- [x] Draggable activities from sidebar catalog (`useDraggable`)
+- [x] Droppable empty timeline slots (`useDroppable`) with visual feedback
+- [x] DndContext + DragOverlay on dashboard page
+- [x] Auto-create task on activity drop
+- [x] TaskForm "From Catalog" / "Manual" two-tab mode
+- [x] GoalsPanelContent + ActivityCatalogContent extracted for reuse
+- [x] Timezone fix: `parseCalendarDate()` for Prisma `@db.Date` fields
 
 ---
 
@@ -183,6 +193,23 @@ The MVP focuses on two core modules:
 
 ---
 
+## Phase 2.5: Creative Library (Complete)
+
+**Goal**: Full library module for inspirations, templates, AI images, components, and ideas
+
+### Library Module
+- [x] Zod validation schemas (`library.schema.ts`)
+- [x] API routes: `/api/library` (GET, POST) + `/api/library/[id]` (GET, PATCH, DELETE)
+- [x] React Query hooks (`use-library.ts`): useLibrary, useLibraryItem, CRUD mutations
+- [x] Library type config (`src/config/library.ts`): colors, icons, labels per type
+- [x] Components: LibraryItemCard, LibraryGrid, LibraryItemForm, TagInput
+- [x] Library list page with stats, debounced search, type filter tabs, grid display
+- [x] Library detail page with type-specific fields, external links, edit/delete
+- [x] Navigation: Library moved from Coming Soon to "Creative" nav group
+- [x] `ensureUser` helper for API routes
+
+---
+
 ## Phase 3: Integration & Polish
 
 **Goal**: Connect modules and add finishing touches
@@ -228,6 +255,8 @@ When complete, the app should:
 | Phase 1: Command Center | Complete | 2026-01-26 | 2026-01-26 |
 | Phase 2: Client CRM | Complete | 2026-01-26 | 2026-01-26 |
 | Phase 1.5: Hardening | Complete | 2026-01-27 | 2026-01-27 |
+| Phase 2.5: Creative Library | Complete | 2026-01-27 | 2026-01-27 |
+| Day Builder UX Overhaul | Complete | 2026-01-27 | 2026-01-27 |
 | Phase 3: Integration | In Progress | 2026-01-27 | - |
 
 ---
@@ -238,6 +267,8 @@ When complete, the app should:
 - **2026-01-26**: Implemented Day Builder + Activity Catalog. Activity model, full CRUD APIs for activities/tasks/goals, React Query hooks, Day Builder dashboard with timeline + goals + activity catalog. Task completion auto-increments goals and activity usage.
 - **2026-01-26**: Wired up Command Center and Client CRM with real data. Tasks, goals, calendar, clients list, client detail, project Kanban, project detail all functional.
 - **2026-01-27**: Critical fixes + modular hardening. Fixed GoalsPanel tabs, timezone bug, useAuth re-render, form close timing. Wired dead buttons, added toast notifications, delete confirmations, and cache invalidation fixes across all modules.
+- **2026-01-27**: Creative Library module complete. Full CRUD, search, type filtering, detail views with type-specific fields. Navigation updated.
+- **2026-01-27**: Day Builder UX Overhaul complete. `@dnd-kit/core` drag-and-drop from Activity Catalog to timeline slots, CommandSidebar with Goals/Activities tabs, TaskForm two-tab mode ("From Catalog" / "Manual"), timezone fix for Prisma `@db.Date` fields.
 - Focus on functionality over polish in MVP
 - Document any blockers or decisions made
 
@@ -246,10 +277,9 @@ When complete, the app should:
 ## Next Steps
 
 1. Run database migration (waiting for credentials)
-2. Add drag-and-drop reordering for timeline blocks
-3. Add task category filtering
-4. Add inline edit flows for clients and projects
-5. Start Creative Library (Phase 2)
+2. Add task category filtering
+3. Add inline edit flows for clients and projects
+4. Start Intel Feed + AI Hub (Phase 3)
 
 ---
 

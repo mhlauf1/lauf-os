@@ -66,6 +66,7 @@ All API routes return `{ data: T | null, error: string | null }`.
 | `use-goals.ts` | `useGoals`, `useCreateGoal`, `useUpdateGoal` |
 | `use-clients.ts` | `useClients`, `useClient`, `useCreateClient`, `useUpdateClient`, `useDeleteClient` |
 | `use-projects.ts` | `useProjects`, `useProject`, `useCreateProject`, `useUpdateProject`, `useDeleteProject` |
+| `use-library.ts` | `useLibrary`, `useLibraryItem`, `useCreateLibraryItem`, `useUpdateLibraryItem`, `useDeleteLibraryItem` |
 
 All mutations auto-invalidate related query caches.
 
@@ -80,9 +81,9 @@ All mutations auto-invalidate related query caches.
 
 | # | Module | Phase | Status |
 |---|--------|-------|--------|
-| 1 | Command Center | 1 | Complete + Hardened (toasts, delete, cache fixes) |
+| 1 | Command Center | 1 | Complete + Hardened + DnD UX Overhaul |
 | 2 | Client CRM | 1 | Complete + Hardened (toasts, delete confirmations, cache fixes) |
-| 3 | Creative Library | 2 | Planned |
+| 3 | Creative Library | 2 | Complete (CRUD, search, type filters, detail views) |
 | 4 | Health Tracker | 4 | Planned |
 | 5 | Financial Tracker | 4 | Planned |
 | 6 | Intel Feed | 3 | Planned |
@@ -115,6 +116,7 @@ src/
 │   │   ├── command/        # Command Center (tasks, calendar, goals)
 │   │   ├── clients/        # Client CRM
 │   │   ├── projects/       # Project pipeline
+│   │   ├── library/        # Creative Library (list + detail)
 │   │   └── settings/       # User settings
 │   └── api/                # API routes
 ├── components/
@@ -144,11 +146,15 @@ src/
 | `/api/clients/[id]` | GET, PATCH, DELETE | Get/update/delete client |
 | `/api/projects` | GET, POST | List/create projects (filters: status, clientId) |
 | `/api/projects/[id]` | GET, PATCH, DELETE | Get/update/delete project |
+| `/api/library` | GET, POST | List/create library items (filters: type, search) |
+| `/api/library/[id]` | GET, PATCH, DELETE | Get/update/delete library item |
 
 ## What's Wired Up
 
-### Command Center (Phase 1)
-- **Day Builder dashboard**: Timeline + GoalsPanel (with toggle) + Activity Catalog
+### Command Center (Phase 1 + UX Overhaul)
+- **Day Builder dashboard**: Timeline + CommandSidebar (Goals/Activities tabs) + drag-and-drop (`@dnd-kit/core`)
+- **Drag-and-drop**: Drag activities from sidebar catalog onto empty timeline slots to auto-create tasks
+- **TaskForm**: Two-tab mode ("From Catalog" / "Manual") when activities available; "from activity" pre-fill mode
 - **Tasks page**: Status tabs (All/TODO/IN_PROGRESS/BLOCKED/DONE), category filter dropdown, search, create dialog
 - **Goals page**: Type filters (All/Daily/Weekly/Monthly/Yearly), real stats (completed count, rate), completion toggle, create dialog for all types
 - **Calendar week view**: 7-day grid with tasks in time slots, week navigation (prev/next/today), "+" button to create tasks at specific day/time
@@ -161,6 +167,15 @@ src/
 - **Projects page**: Kanban board with real data, status change via `useUpdateProject`, edit navigates to detail
 - **Project detail**: Overview with status/priority badges, links (repo, staging, production), tasks list, delete with confirmation
 - **API routes**: `/api/clients/[id]` and `/api/projects/[id]` with GET/PATCH/DELETE + Zod validation + ownership checks
+
+### Creative Library (Phase 2)
+- **Library list**: Stats cards (item counts by type), debounced search, type filter tabs (All/Inspiration/Template/AI Image/Component/Idea), responsive grid
+- **Library detail**: Type-specific fields (source URL, Figma URL, GitHub URL, AI prompt, tech stack), external link buttons, edit/delete
+- **Components**: LibraryItemCard, LibraryGrid, LibraryItemForm (with type-specific field rendering), TagInput
+- **API routes**: `/api/library` (GET with type/search filters, POST) + `/api/library/[id]` (GET, PATCH, DELETE)
+- **React Query hooks**: `use-library.ts` with useLibrary, useLibraryItem, CRUD mutations + auto-invalidation
+- **Config**: `src/config/library.ts` with colors, icons, labels per LibraryItemType
+- **Validation**: Zod schemas in `src/lib/validations/library.schema.ts`
 
 ### Hardening (Phase 1.5)
 - **Toast notifications**: Sonner toaster in root layout, success/error on all mutations

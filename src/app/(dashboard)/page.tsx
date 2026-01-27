@@ -1,7 +1,16 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { format } from 'date-fns'
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragStartEvent,
+  type DragEndEvent,
+} from '@dnd-kit/core'
 import { Plus, Target, Clock, TrendingUp } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -17,10 +26,10 @@ import {
 } from '@/components/ui/dialog'
 import {
   DailyTimeline,
-  GoalsPanel,
-  ActivityCatalog,
+  CommandSidebar,
   TaskForm,
   ActivityForm,
+  ActivityCardInner,
 } from '@/components/modules/command'
 import { useTasks, useCreateTask, useUpdateTask, useDeleteTask } from '@/hooks/use-tasks'
 import { useActivities, useCreateActivity, useUpdateActivity, useDeleteActivity } from '@/hooks/use-activities'
@@ -69,6 +78,12 @@ export default function DayBuilderPage() {
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null)
   const [taskFormInitial, setTaskFormInitial] = useState<Partial<TaskFormData>>({})
   const [goalType, setGoalType] = useState<GoalType>('MONTHLY')
+  const [activeActivity, setActiveActivity] = useState<Activity | null>(null)
+
+  // Drag-and-drop sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
+  )
 
   // Computed stats
   const stats = useMemo(() => {
@@ -114,8 +129,9 @@ export default function DayBuilderPage() {
   }
 
   function handleCreateTask(data: TaskFormData) {
+    // Use UTC midnight so @db.Date stores the correct calendar date
     const scheduledDate = data.scheduledDate
-      ? new Date(data.scheduledDate + 'T00:00:00').toISOString()
+      ? new Date(data.scheduledDate + 'T00:00:00.000Z').toISOString()
       : undefined
 
     createTask.mutate(
@@ -242,6 +258,54 @@ export default function DayBuilderPage() {
     setGoalFormOpen(true)
   }
 
+  // Drag-and-drop handlers
+  const handleDragStart = useCallback((event: DragStartEvent) => {
+    const data = event.active.data.current
+    if (data?.type === 'activity') {
+      setActiveActivity(data.activity as Activity)
+    }
+  }, [])
+
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      setActiveActivity(null)
+      const { active, over } = event
+      if (!over) return
+
+      const activeData = active.data.current
+      const overData = over.data.current
+      if (activeData?.type !== 'activity' || overData?.type !== 'timeline-slot') return
+
+      const activity = activeData.activity as Activity
+      const time = overData.time as string
+      // Use UTC midnight so @db.Date stores the correct calendar date
+      const scheduledDate = new Date(todayStr + 'T00:00:00.000Z').toISOString()
+
+      createTask.mutate(
+        {
+          title: activity.title,
+          description: activity.description || undefined,
+          category: activity.category,
+          priority: 'MEDIUM',
+          energyLevel: activity.energyLevel,
+          timeBlockMinutes: activity.defaultDuration,
+          scheduledDate,
+          scheduledTime: time,
+          activityId: activity.id,
+        },
+        {
+          onSuccess: () => toast.success(`Added "${activity.title}" at ${time}`),
+          onError: (err) => toast.error(err.message || 'Failed to create task'),
+        }
+      )
+    },
+    [todayStr, createTask]
+  )
+
+  const handleDragCancel = useCallback(() => {
+    setActiveActivity(null)
+  }, [])
+
   const isLoading = tasksLoading || activitiesLoading || goalsLoading
 
   return (
@@ -313,67 +377,84 @@ export default function DayBuilderPage() {
         </Card>
       </div>
 
-      {/* Main Content: Timeline + Goals */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Daily Timeline (2/3 width) */}
-        <div className="lg:col-span-2">
-          {isLoading ? (
-            <Card>
-              <CardContent className="py-12">
-                <p className="text-center text-sm text-text-tertiary">
-                  Loading your day...
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            <DailyTimeline
-              date={today}
-              tasks={tasks}
-              onAddTask={handleAddTaskAtTime}
-              onDeleteTask={handleDeleteTask}
-              onStartTask={handleStartTask}
-              onCompleteTask={handleCompleteTask}
-              onPauseTask={handlePauseTask}
+      {/* Main Content: Timeline + Sidebar (Goals/Activities) */}
+      <DndContext
+        sensors={sensors}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+        onDragCancel={handleDragCancel}
+      >
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          {/* Daily Timeline (2/3 width) */}
+          <div className="lg:col-span-2">
+            {isLoading ? (
+              <Card>
+                <CardContent className="py-12">
+                  <p className="text-center text-sm text-text-tertiary">
+                    Loading your day...
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              <DailyTimeline
+                date={today}
+                tasks={tasks}
+                onAddTask={handleAddTaskAtTime}
+                onDeleteTask={handleDeleteTask}
+                onStartTask={handleStartTask}
+                onCompleteTask={handleCompleteTask}
+                onPauseTask={handlePauseTask}
+              />
+            )}
+          </div>
+
+          {/* Sidebar: Goals / Activities tabs (1/3 width) */}
+          <div>
+            <CommandSidebar
+              goals={allGoals}
+              activeGoalType={goalType}
+              onGoalTypeChange={setGoalType}
+              onAddGoal={handleAddGoal}
+              onToggleGoalComplete={(id, completed) => {
+                updateGoal.mutate(
+                  {
+                    id,
+                    completedAt: completed ? new Date().toISOString() : null,
+                  },
+                  {
+                    onSuccess: () =>
+                      toast.success(completed ? 'Goal completed' : 'Goal reopened'),
+                    onError: (err) =>
+                      toast.error(err.message || 'Failed to update goal'),
+                  }
+                )
+              }}
+              activities={activities}
+              onSelectActivity={handleSelectActivity}
+              onCreateActivity={() => {
+                setEditingActivity(null)
+                setActivityFormOpen(true)
+              }}
+              onEditActivity={handleEditActivity}
+              onDeleteActivity={handleDeleteActivity}
             />
-          )}
+          </div>
         </div>
 
-        {/* Goals Panel (1/3 width) — pass all goals so tabs work */}
-        <div>
-          <GoalsPanel
-            goals={allGoals}
-            activeType={goalType}
-            onTypeChange={setGoalType}
-            onAddGoal={handleAddGoal}
-            onToggleComplete={(id, completed) => {
-              updateGoal.mutate(
-                {
-                  id,
-                  completedAt: completed ? new Date().toISOString() : null,
-                },
-                {
-                  onSuccess: () =>
-                    toast.success(completed ? 'Goal completed' : 'Goal reopened'),
-                  onError: (err) =>
-                    toast.error(err.message || 'Failed to update goal'),
-                }
-              )
-            }}
-          />
-        </div>
-      </div>
-
-      {/* Activity Catalog */}
-      <ActivityCatalog
-        activities={activities}
-        onSelectActivity={handleSelectActivity}
-        onCreateActivity={() => {
-          setEditingActivity(null)
-          setActivityFormOpen(true)
-        }}
-        onEditActivity={handleEditActivity}
-        onDeleteActivity={handleDeleteActivity}
-      />
+        {/* Drag Overlay — floating card while dragging */}
+        <DragOverlay>
+          {activeActivity ? (
+            <div className="w-56 opacity-90">
+              <ActivityCardInner
+                activity={activeActivity}
+                onSelect={() => {}}
+                onEdit={() => {}}
+                onDelete={() => {}}
+              />
+            </div>
+          ) : null}
+        </DragOverlay>
+      </DndContext>
 
       {/* Task Form Dialog */}
       <TaskForm
@@ -383,6 +464,7 @@ export default function DayBuilderPage() {
         initialData={taskFormInitial}
         fromActivity={selectedActivity}
         goals={allGoals}
+        activities={activities}
       />
 
       {/* Activity Form Dialog */}

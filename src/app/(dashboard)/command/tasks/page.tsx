@@ -57,7 +57,7 @@ export default function TasksPage() {
 
   function handleCreateTask(data: TaskFormData) {
     const scheduledDate = data.scheduledDate
-      ? new Date(data.scheduledDate + 'T00:00:00').toISOString()
+      ? new Date(data.scheduledDate + 'T00:00:00.000Z').toISOString()
       : undefined
 
     createTask.mutate(
