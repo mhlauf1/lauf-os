@@ -133,8 +133,6 @@ export function ClientCard({ client, onEdit, onDelete }: ClientCardProps) {
               >
                 Edit
               </DropdownMenuItem>
-              <DropdownMenuItem>Add Project</DropdownMenuItem>
-              <DropdownMenuItem>Log Contact</DropdownMenuItem>
               <DropdownMenuItem
                 className="text-red-400"
                 onClick={(e) => {

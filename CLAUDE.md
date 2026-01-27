@@ -309,7 +309,25 @@ Clients have a health score (GREEN/YELLOW/RED) based on:
 - [x] Projects page with Kanban board rendering real data, status change via drag
 - [x] Project detail page with overview, links, tasks list, delete
 
+**Phase 1.5: Critical Fixes + Modular Hardening** (Complete)
+- [x] Fix GoalsPanel dashboard tabs (fetch all goals, not just monthly)
+- [x] GoalFormDialog supports Daily/Weekly/Monthly type picker
+- [x] Fix timezone bug in task API (date range filter instead of exact match)
+- [x] Fix useAuth infinite re-render (useMemo for Supabase client)
+- [x] Fix form close timing (parent controls dialog close on mutation success)
+- [x] Wire TimeBlock delete button to useDeleteTask
+- [x] Remove dead buttons from ClientCard (Add Project, Log Contact)
+- [x] Wire ProjectKanban edit button to navigate to detail page
+- [x] Sonner toast notifications wired into root layout
+- [x] Toast success/error on all mutation callsites across all pages
+- [x] Delete confirmation dialogs (ConfirmDeleteDialog component) on clients + projects
+- [x] Fix cache invalidation: useDeleteTask invalidates goals + activities
+- [x] Fix cache invalidation: useDeleteClient invalidates projects
+- [x] Fix cache invalidation: useCreateProject/useDeleteProject invalidates clients + tasks
+- [x] Shared component: `src/components/shared/ConfirmDeleteDialog.tsx`
+- [x] Installed shadcn/ui AlertDialog component
+
 **Next Up:**
 - [ ] Database migration (waiting for credentials)
-- [ ] Creative Library (Phase 3)
+- [ ] Creative Library (Phase 2)
 - [ ] Intel Feed + AI Hub (Phase 3)

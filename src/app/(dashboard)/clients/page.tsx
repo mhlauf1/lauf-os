@@ -3,10 +3,12 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Plus, Search, Users, AlertCircle, CheckCircle, Loader2 } from 'lucide-react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { ClientCard } from '@/components/modules/clients/ClientCard'
+import { ConfirmDeleteDialog } from '@/components/shared/ConfirmDeleteDialog'
 import { useClients, useDeleteClient } from '@/hooks/use-clients'
 
 const statusFilters = [
@@ -21,6 +23,7 @@ export default function ClientsPage() {
   const [activeFilter, setActiveFilter] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
 
   // Debounce search for server-side filtering
   useEffect(() => {
@@ -171,11 +174,29 @@ export default function ClientsPage() {
             <ClientCard
               key={client.id}
               client={client}
-              onDelete={(id) => deleteClient.mutate(id)}
+              onDelete={(id) => setDeleteConfirmId(id)}
             />
           ))}
         </div>
       )}
+
+      <ConfirmDeleteDialog
+        open={!!deleteConfirmId}
+        onOpenChange={(open) => { if (!open) setDeleteConfirmId(null) }}
+        title="Delete client?"
+        description="This will permanently delete this client and all associated data. This action cannot be undone."
+        isPending={deleteClient.isPending}
+        onConfirm={() => {
+          if (!deleteConfirmId) return
+          deleteClient.mutate(deleteConfirmId, {
+            onSuccess: () => {
+              toast.success('Client deleted')
+              setDeleteConfirmId(null)
+            },
+            onError: (err) => toast.error(err.message || 'Failed to delete client'),
+          })
+        }}
+      />
     </div>
   )
 }

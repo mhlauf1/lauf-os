@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Folder, ArrowRight, Loader2 } from 'lucide-react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { ProjectKanban } from '@/components/modules/clients/ProjectKanban'
@@ -16,7 +17,13 @@ export default function ProjectsPage() {
   const updateProject = useUpdateProject()
 
   function handleMoveProject(id: string, newStatus: ProjectStatus) {
-    updateProject.mutate({ id, status: newStatus })
+    updateProject.mutate(
+      { id, status: newStatus },
+      {
+        onSuccess: () => toast.success('Project moved'),
+        onError: (err) => toast.error(err.message || 'Failed to move project'),
+      }
+    )
   }
 
   function handleProjectClick(id: string) {
@@ -94,6 +101,7 @@ export default function ProjectsPage() {
         <ProjectKanban
           projects={projects as Parameters<typeof ProjectKanban>[0]['projects']}
           onProjectClick={handleProjectClick}
+          onEditProject={(id) => router.push(`/projects/${id}`)}
           onMoveProject={handleMoveProject}
         />
       )}

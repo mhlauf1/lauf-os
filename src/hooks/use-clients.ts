@@ -135,6 +135,7 @@ export function useDeleteClient() {
     mutationFn: deleteClient,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clients'] })
+      queryClient.invalidateQueries({ queryKey: ['projects'] })
     },
   })
 }

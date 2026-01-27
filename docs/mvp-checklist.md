@@ -97,6 +97,7 @@ The MVP focuses on two core modules:
 - [ ] Add task category filtering
 - [ ] Implement drag-and-drop reordering
 - [x] Add task completion (mark done, record completedAt)
+- [x] Delete task from timeline (TimeBlock delete button)
 
 ### Time Blocking
 - [x] Display 90-minute blocks on timeline
@@ -108,43 +109,77 @@ The MVP focuses on two core modules:
 - [x] Create monthly goals
 - [x] Track goal progress (currentValue/targetValue)
 - [x] Display goals in sidebar widget
-- [ ] Mark goals complete via UI
+- [x] Mark goals complete via UI
+- [x] GoalsPanel supports all goal types (Daily/Weekly/Monthly)
+- [x] GoalFormDialog type picker (Daily/Weekly/Monthly)
 
 ### Calendar View
-- [ ] Week view with days as columns
+- [x] Week view with days as columns
 - [ ] Drag tasks to different days
-- [ ] Show task counts per day
-- [ ] Navigate between weeks
+- [x] Show task counts per day
+- [x] Navigate between weeks
 
 ---
 
-## Phase 2: Client CRM Core
+## Phase 2: Client CRM Core (Complete)
 
 **Goal**: Functional client management system
 
 ### Client Management
-- [ ] Create new clients via form
-- [ ] Edit client details
-- [ ] Display client list with health score badges
-- [ ] Filter clients by status (Active, Paused, etc.)
-- [ ] Filter clients by health score
+- [x] Create new clients via form
+- [ ] Edit client details (inline edit form)
+- [x] Display client list with health score badges
+- [x] Filter clients by status (Active, Paused, etc.)
+- [x] Filter clients by health score
+- [x] Delete client with confirmation dialog
 
 ### Project Pipeline
-- [ ] Create projects linked to clients
-- [ ] Kanban board with project statuses
-- [ ] Drag projects between columns
-- [ ] Project detail view
+- [x] Create projects linked to clients
+- [x] Kanban board with project statuses
+- [x] Drag projects between columns
+- [x] Project detail view
+- [x] Delete project with confirmation dialog
 
 ### Health Scores
-- [ ] Manual health score updates
-- [ ] Visual indicators (GREEN/YELLOW/RED)
+- [x] Manual health score updates
+- [x] Visual indicators (GREEN/YELLOW/RED)
 - [ ] Health score history (stretch)
 
 ### Client Details
-- [ ] Quick links (website, GitHub, Figma, Vercel)
+- [x] Quick links (website, GitHub, Figma, Vercel)
 - [ ] Encrypted credentials storage
-- [ ] Notes and metadata
+- [x] Notes and metadata
 - [ ] Follow-up reminders
+
+---
+
+## Phase 1.5: Critical Fixes + Modular Hardening (Complete)
+
+**Goal**: Fix bugs, wire dead buttons, add error handling
+
+### Bug Fixes
+- [x] Fix GoalsPanel dashboard tabs (fetch all goals, not just monthly)
+- [x] Fix timezone bug in task date filtering (use date range)
+- [x] Fix useAuth infinite re-render (useMemo)
+- [x] Fix form close timing (close on mutation success)
+
+### Dead Button Cleanup
+- [x] Wire TimeBlock delete button
+- [x] Remove dead TimeBlock Reschedule item
+- [x] Remove dead ClientCard buttons (Add Project, Log Contact)
+- [x] Wire ProjectKanban edit to detail page navigation
+
+### Error Handling
+- [x] Sonner toast notifications in root layout
+- [x] Toast success/error on all mutations across all pages
+- [x] Delete confirmation dialogs (AlertDialog)
+- [x] Reusable ConfirmDeleteDialog shared component
+
+### Cache Invalidation
+- [x] useDeleteTask invalidates goals + activities
+- [x] useDeleteClient invalidates projects
+- [x] useCreateProject invalidates clients
+- [x] useDeleteProject invalidates clients + tasks
 
 ---
 
@@ -153,19 +188,19 @@ The MVP focuses on two core modules:
 **Goal**: Connect modules and add finishing touches
 
 ### Cross-Module Integration
-- [ ] Link tasks to projects
-- [ ] Show client tasks in client detail
-- [ ] Project tasks view
+- [x] Link tasks to projects
+- [x] Show client tasks in client detail
+- [x] Project tasks view
 
 ### UI Polish
-- [ ] Loading states for all data
-- [ ] Error handling and display
-- [ ] Empty states with CTAs
-- [ ] Toast notifications
+- [x] Loading states for all data
+- [x] Error handling and display
+- [x] Empty states with CTAs
+- [x] Toast notifications
 
 ### Data Validation
 - [ ] Zod schemas for all forms
-- [ ] Server-side validation
+- [x] Server-side validation
 - [ ] Client-side validation feedback
 
 ---
@@ -178,10 +213,10 @@ When complete, the app should:
 - [x] Create and schedule tasks in 90-minute blocks
 - [x] View daily timeline with tasks
 - [x] Track monthly goals with auto-incrementing progress
-- [ ] Manage clients with health scores
-- [ ] Track projects in pipeline view
-- [ ] Navigate between all MVP routes
-- [ ] Be usable daily
+- [x] Manage clients with health scores
+- [x] Track projects in pipeline view
+- [x] Navigate between all MVP routes
+- [x] Be usable daily
 
 ---
 
@@ -190,9 +225,10 @@ When complete, the app should:
 | Phase | Status | Started | Completed |
 |-------|--------|---------|-----------|
 | Phase 0: Infrastructure | Complete | 2026-01-26 | 2026-01-26 |
-| Phase 1: Command Center | In Progress | 2026-01-26 | - |
-| Phase 2: Client CRM | Not Started | - | - |
-| Phase 3: Integration | Not Started | - | - |
+| Phase 1: Command Center | Complete | 2026-01-26 | 2026-01-26 |
+| Phase 2: Client CRM | Complete | 2026-01-26 | 2026-01-26 |
+| Phase 1.5: Hardening | Complete | 2026-01-27 | 2026-01-27 |
+| Phase 3: Integration | In Progress | 2026-01-27 | - |
 
 ---
 
@@ -200,6 +236,8 @@ When complete, the app should:
 
 - **2026-01-26**: Completed infrastructure pivot. Prisma schema with 16+ models, new route structure, core components built, user creation trigger fixed.
 - **2026-01-26**: Implemented Day Builder + Activity Catalog. Activity model, full CRUD APIs for activities/tasks/goals, React Query hooks, Day Builder dashboard with timeline + goals + activity catalog. Task completion auto-increments goals and activity usage.
+- **2026-01-26**: Wired up Command Center and Client CRM with real data. Tasks, goals, calendar, clients list, client detail, project Kanban, project detail all functional.
+- **2026-01-27**: Critical fixes + modular hardening. Fixed GoalsPanel tabs, timezone bug, useAuth re-render, form close timing. Wired dead buttons, added toast notifications, delete confirmations, and cache invalidation fixes across all modules.
 - Focus on functionality over polish in MVP
 - Document any blockers or decisions made
 
@@ -207,12 +245,12 @@ When complete, the app should:
 
 ## Next Steps
 
-1. Run database migration for Activity model + Task/Goal schema changes
+1. Run database migration (waiting for credentials)
 2. Add drag-and-drop reordering for timeline blocks
 3. Add task category filtering
-4. Build calendar week view
-5. Start Client CRM wire-up
+4. Add inline edit flows for clients and projects
+5. Start Creative Library (Phase 2)
 
 ---
 
-_Last updated: 2026-01-26_
+_Last updated: 2026-01-27_

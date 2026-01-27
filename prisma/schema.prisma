@@ -22,6 +22,9 @@ enum TaskCategory {
   ADMIN
   SAAS
   NETWORKING
+  PERSONAL
+  LEISURE
+  ROUTINE
 }
 
 enum TaskStatus {

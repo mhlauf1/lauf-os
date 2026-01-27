@@ -1,13 +1,15 @@
 'use client'
 
-import { use } from 'react'
+import { use, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, Trash2, ExternalLink, Github, Figma, Loader2 } from 'lucide-react'
+import { toast } from 'sonner'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { useProject, useDeleteProject } from '@/hooks/use-projects'
+import { ConfirmDeleteDialog } from '@/components/shared/ConfirmDeleteDialog'
 import type { Project, ProjectStatus, Priority, TaskStatus, TaskCategory } from '@prisma/client'
 
 interface ProjectWithRelations extends Project {
@@ -45,10 +47,15 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
   const router = useRouter()
   const { data: project, isLoading, error } = useProject(id)
   const deleteProject = useDeleteProject()
+  const [deleteOpen, setDeleteOpen] = useState(false)
 
   function handleDelete() {
     deleteProject.mutate(id, {
-      onSuccess: () => router.push('/projects'),
+      onSuccess: () => {
+        toast.success('Project deleted')
+        router.push('/projects')
+      },
+      onError: (err) => toast.error(err.message || 'Failed to delete project'),
     })
   }
 
@@ -117,7 +124,7 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
           <Button
             variant="outline"
             className="text-red-400 hover:text-red-500"
-            onClick={handleDelete}
+            onClick={() => setDeleteOpen(true)}
             disabled={deleteProject.isPending}
           >
             <Trash2 className="mr-2 h-4 w-4" />
@@ -278,6 +285,15 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
           )}
         </CardContent>
       </Card>
+
+      <ConfirmDeleteDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title="Delete project?"
+        description="This will permanently delete this project and all associated data. This action cannot be undone."
+        isPending={deleteProject.isPending}
+        onConfirm={handleDelete}
+      />
     </div>
   )
 }

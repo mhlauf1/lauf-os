@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react'
 import { format } from 'date-fns'
 import { Plus, Target, Clock, TrendingUp } from 'lucide-react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -21,29 +22,39 @@ import {
   TaskForm,
   ActivityForm,
 } from '@/components/modules/command'
-import { useTasks, useCreateTask, useUpdateTask } from '@/hooks/use-tasks'
+import { useTasks, useCreateTask, useUpdateTask, useDeleteTask } from '@/hooks/use-tasks'
 import { useActivities, useCreateActivity, useUpdateActivity, useDeleteActivity } from '@/hooks/use-activities'
 import { useGoals, useCreateGoal, useUpdateGoal } from '@/hooks/use-goals'
 import type { Activity, GoalType } from '@prisma/client'
 import type { TaskFormData } from '@/components/modules/command/TaskForm'
 
-const DEFAULT_SLOTS = ['08:00', '09:30', '11:00', '14:00', '15:30', '17:00']
+const DEFAULT_SLOTS = [
+  '06:30', '07:30', '09:00', '10:30',
+  '12:00', '13:30', '15:00', '16:30',
+  '18:00', '19:30', '21:00',
+]
 
 export default function DayBuilderPage() {
   const today = new Date()
   const todayStr = format(today, 'yyyy-MM-dd')
 
-  // Data queries
+  // Data queries — fetch ALL incomplete goals, not just monthly
   const { data: tasks = [], isLoading: tasksLoading } = useTasks({ date: todayStr })
   const { data: activities = [], isLoading: activitiesLoading } = useActivities()
-  const { data: monthlyGoals = [], isLoading: goalsLoading } = useGoals({
-    type: 'MONTHLY',
+  const { data: allGoals = [], isLoading: goalsLoading } = useGoals({
     completed: 'false',
   })
+
+  // Derive monthly goals for stats card only
+  const monthlyGoals = useMemo(
+    () => allGoals.filter((g) => g.type === 'MONTHLY'),
+    [allGoals]
+  )
 
   // Mutations
   const createTask = useCreateTask()
   const updateTask = useUpdateTask()
+  const deleteTask = useDeleteTask()
   const createActivity = useCreateActivity()
   const updateActivity = useUpdateActivity()
   const deleteActivity = useDeleteActivity()
@@ -107,30 +118,66 @@ export default function DayBuilderPage() {
       ? new Date(data.scheduledDate + 'T00:00:00').toISOString()
       : undefined
 
-    createTask.mutate({
-      title: data.title,
-      description: data.description || undefined,
-      category: data.category,
-      priority: data.priority,
-      energyLevel: data.energyLevel,
-      timeBlockMinutes: data.timeBlockMinutes,
-      scheduledDate,
-      scheduledTime: data.scheduledTime || undefined,
-      activityId: data.activityId || undefined,
-      goalId: data.goalId || undefined,
-    })
+    createTask.mutate(
+      {
+        title: data.title,
+        description: data.description || undefined,
+        category: data.category,
+        priority: data.priority,
+        energyLevel: data.energyLevel,
+        timeBlockMinutes: data.timeBlockMinutes,
+        scheduledDate,
+        scheduledTime: data.scheduledTime || undefined,
+        activityId: data.activityId || undefined,
+        goalId: data.goalId || undefined,
+      },
+      {
+        onSuccess: () => {
+          toast.success('Task created')
+          setTaskFormOpen(false)
+        },
+        onError: (err) => {
+          toast.error(err.message || 'Failed to create task')
+        },
+      }
+    )
   }
 
   function handleStartTask(id: string) {
-    updateTask.mutate({ id, status: 'IN_PROGRESS' })
+    updateTask.mutate(
+      { id, status: 'IN_PROGRESS' },
+      {
+        onSuccess: () => toast.success('Task started'),
+        onError: (err) => toast.error(err.message || 'Failed to start task'),
+      }
+    )
   }
 
   function handleCompleteTask(id: string) {
-    updateTask.mutate({ id, status: 'DONE' })
+    updateTask.mutate(
+      { id, status: 'DONE' },
+      {
+        onSuccess: () => toast.success('Task completed'),
+        onError: (err) => toast.error(err.message || 'Failed to complete task'),
+      }
+    )
   }
 
   function handlePauseTask(id: string) {
-    updateTask.mutate({ id, status: 'TODO' })
+    updateTask.mutate(
+      { id, status: 'TODO' },
+      {
+        onSuccess: () => toast.success('Task paused'),
+        onError: (err) => toast.error(err.message || 'Failed to pause task'),
+      }
+    )
+  }
+
+  function handleDeleteTask(id: string) {
+    deleteTask.mutate(id, {
+      onSuccess: () => toast.success('Task deleted'),
+      onError: (err) => toast.error(err.message || 'Failed to delete task'),
+    })
   }
 
   function handleCreateActivity(data: {
@@ -141,24 +188,42 @@ export default function DayBuilderPage() {
     energyLevel: string
   }) {
     if (editingActivity) {
-      updateActivity.mutate({
-        id: editingActivity.id,
-        title: data.title,
-        description: data.description || undefined,
-        category: data.category as Activity['category'],
-        defaultDuration: data.defaultDuration,
-        energyLevel: data.energyLevel as Activity['energyLevel'],
-      })
+      updateActivity.mutate(
+        {
+          id: editingActivity.id,
+          title: data.title,
+          description: data.description || undefined,
+          category: data.category as Activity['category'],
+          defaultDuration: data.defaultDuration,
+          energyLevel: data.energyLevel as Activity['energyLevel'],
+        },
+        {
+          onSuccess: () => {
+            toast.success('Activity updated')
+            setActivityFormOpen(false)
+            setEditingActivity(null)
+          },
+          onError: (err) => toast.error(err.message || 'Failed to update activity'),
+        }
+      )
     } else {
-      createActivity.mutate({
-        title: data.title,
-        description: data.description || undefined,
-        category: data.category as Activity['category'],
-        defaultDuration: data.defaultDuration,
-        energyLevel: data.energyLevel as Activity['energyLevel'],
-      })
+      createActivity.mutate(
+        {
+          title: data.title,
+          description: data.description || undefined,
+          category: data.category as Activity['category'],
+          defaultDuration: data.defaultDuration,
+          energyLevel: data.energyLevel as Activity['energyLevel'],
+        },
+        {
+          onSuccess: () => {
+            toast.success('Activity created')
+            setActivityFormOpen(false)
+          },
+          onError: (err) => toast.error(err.message || 'Failed to create activity'),
+        }
+      )
     }
-    setEditingActivity(null)
   }
 
   function handleEditActivity(activity: Activity) {
@@ -167,7 +232,10 @@ export default function DayBuilderPage() {
   }
 
   function handleDeleteActivity(id: string) {
-    deleteActivity.mutate(id)
+    deleteActivity.mutate(id, {
+      onSuccess: () => toast.success('Activity deleted'),
+      onError: (err) => toast.error(err.message || 'Failed to delete activity'),
+    })
   }
 
   function handleAddGoal() {
@@ -262,6 +330,7 @@ export default function DayBuilderPage() {
               date={today}
               tasks={tasks}
               onAddTask={handleAddTaskAtTime}
+              onDeleteTask={handleDeleteTask}
               onStartTask={handleStartTask}
               onCompleteTask={handleCompleteTask}
               onPauseTask={handlePauseTask}
@@ -269,18 +338,26 @@ export default function DayBuilderPage() {
           )}
         </div>
 
-        {/* Goals Panel (1/3 width) */}
+        {/* Goals Panel (1/3 width) — pass all goals so tabs work */}
         <div>
           <GoalsPanel
-            goals={monthlyGoals}
+            goals={allGoals}
             activeType={goalType}
             onTypeChange={setGoalType}
             onAddGoal={handleAddGoal}
             onToggleComplete={(id, completed) => {
-              updateGoal.mutate({
-                id,
-                completedAt: completed ? new Date().toISOString() : null,
-              })
+              updateGoal.mutate(
+                {
+                  id,
+                  completedAt: completed ? new Date().toISOString() : null,
+                },
+                {
+                  onSuccess: () =>
+                    toast.success(completed ? 'Goal completed' : 'Goal reopened'),
+                  onError: (err) =>
+                    toast.error(err.message || 'Failed to update goal'),
+                }
+              )
             }}
           />
         </div>
@@ -305,7 +382,7 @@ export default function DayBuilderPage() {
         onSubmit={handleCreateTask}
         initialData={taskFormInitial}
         fromActivity={selectedActivity}
-        goals={monthlyGoals}
+        goals={allGoals}
       />
 
       {/* Activity Form Dialog */}
@@ -323,13 +400,21 @@ export default function DayBuilderPage() {
       <GoalFormDialog
         open={goalFormOpen}
         onOpenChange={setGoalFormOpen}
-        onSubmit={(data) => createGoal.mutate(data)}
+        onSubmit={(data) =>
+          createGoal.mutate(data, {
+            onSuccess: () => {
+              toast.success('Goal created')
+              setGoalFormOpen(false)
+            },
+            onError: (err) => toast.error(err.message || 'Failed to create goal'),
+          })
+        }
       />
     </div>
   )
 }
 
-// Inline goal form dialog since it's simple
+// Inline goal form dialog — supports picking goal type
 function GoalFormDialog({
   open,
   onOpenChange,
@@ -341,24 +426,25 @@ function GoalFormDialog({
 }) {
   const [title, setTitle] = useState('')
   const [targetValue, setTargetValue] = useState('')
+  const [goalType, setGoalType] = useState<GoalType>('MONTHLY')
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     onSubmit({
       title,
-      type: 'MONTHLY',
+      type: goalType,
       targetValue: targetValue ? parseInt(targetValue, 10) : undefined,
     })
     setTitle('')
     setTargetValue('')
-    onOpenChange(false)
+    setGoalType('MONTHLY')
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
-          <DialogTitle>New Monthly Goal</DialogTitle>
+          <DialogTitle>New Goal</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
@@ -370,6 +456,25 @@ function GoalFormDialog({
               placeholder='e.g. "Complete 3 client projects"'
               required
             />
+          </div>
+          <div className="space-y-2">
+            <Label>Type</Label>
+            <div className="flex gap-2">
+              {(['DAILY', 'WEEKLY', 'MONTHLY'] as GoalType[]).map((type) => (
+                <button
+                  key={type}
+                  type="button"
+                  onClick={() => setGoalType(type)}
+                  className={`flex-1 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
+                    goalType === type
+                      ? 'border-text-primary/30 bg-white/10 text-text-primary'
+                      : 'border-border text-text-secondary hover:border-border/80'
+                  }`}
+                >
+                  {type.charAt(0) + type.slice(1).toLowerCase()}
+                </button>
+              ))}
+            </div>
           </div>
           <div className="space-y-2">
             <Label htmlFor="goalTarget">Target Count (optional)</Label>
@@ -397,4 +502,3 @@ function GoalFormDialog({
     </Dialog>
   )
 }
-

@@ -80,8 +80,8 @@ All mutations auto-invalidate related query caches.
 
 | # | Module | Phase | Status |
 |---|--------|-------|--------|
-| 1 | Command Center | 1 | Complete (UI wired to API) |
-| 2 | Client CRM | 1 | Complete (UI wired to API) |
+| 1 | Command Center | 1 | Complete + Hardened (toasts, delete, cache fixes) |
+| 2 | Client CRM | 1 | Complete + Hardened (toasts, delete confirmations, cache fixes) |
 | 3 | Creative Library | 2 | Planned |
 | 4 | Health Tracker | 4 | Planned |
 | 5 | Financial Tracker | 4 | Planned |
@@ -118,8 +118,9 @@ src/
 │   │   └── settings/       # User settings
 │   └── api/                # API routes
 ├── components/
-│   ├── ui/                 # shadcn/ui primitives
+│   ├── ui/                 # shadcn/ui primitives (incl. alert-dialog)
 │   ├── modules/            # Module-specific components
+│   ├── shared/             # Shared components (ConfirmDeleteDialog)
 │   ├── layouts/            # Shell, Sidebar, Header
 │   └── providers.tsx       # React Query provider
 ├── hooks/                  # React Query hooks
@@ -156,10 +157,17 @@ src/
 ### Client CRM (Phase 2)
 - **Clients list**: Health stats cards (GREEN/YELLOW/RED counts), debounced search, status filter tabs (All/Active/Paused/Completed)
 - **Client create**: Full form (name, company, email, phone, industry, URLs, financials, notes)
-- **Client detail**: Overview with HealthScoreBadge + status badge, contact card, linked projects list, delete
-- **Projects page**: Kanban board with real data, status change via `useUpdateProject`
-- **Project detail**: Overview with status/priority badges, links (repo, staging, production), tasks list, delete
+- **Client detail**: Overview with HealthScoreBadge + status badge, contact card, linked projects list, delete with confirmation
+- **Projects page**: Kanban board with real data, status change via `useUpdateProject`, edit navigates to detail
+- **Project detail**: Overview with status/priority badges, links (repo, staging, production), tasks list, delete with confirmation
 - **API routes**: `/api/clients/[id]` and `/api/projects/[id]` with GET/PATCH/DELETE + Zod validation + ownership checks
+
+### Hardening (Phase 1.5)
+- **Toast notifications**: Sonner toaster in root layout, success/error on all mutations
+- **Delete confirmations**: AlertDialog-based ConfirmDeleteDialog for clients and projects
+- **Bug fixes**: GoalsPanel tabs, timezone date filtering, useAuth re-render, form close timing
+- **Dead button cleanup**: TimeBlock delete wired, ClientCard dead items removed, ProjectKanban edit wired
+- **Cache invalidation**: Cross-model invalidation (delete task → goals/activities, delete client → projects, etc.)
 
 ## Design System
 
