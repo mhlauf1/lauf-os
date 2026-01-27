@@ -4,13 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-LAUF OS is a personal command center for "building in public" - a full-stack web app for managing content creation, learning, news curation, and growth tracking. Built specifically for a developer growing an audience on X (Twitter).
+LAUF OS is a **Personal Operating System** - a comprehensive command center for life, work, and growth. Built for a developer/designer managing client work, personal projects, health, finances, and creative output.
+
+**Core Philosophy:** Wake up, open LAUF OS, and know exactly what to do. Everything is prepped, automated in the background, and ready for execution.
 
 **Detailed documentation:**
-- Specification: `.claude/SPEC.md`
-- Architecture: `docs/architecture.md`
-- MVP Checklist: `docs/mvp-checklist.md`
-- Security: `docs/security.md`
+- Master Specification: `.claude/SPEC.md`
+- Database Schema: `prisma/schema.prisma`
 
 ## Tech Stack
 
@@ -22,6 +22,7 @@ LAUF OS is a personal command center for "building in public" - a full-stack web
 | **State (Client)** | Zustand |
 | **State (Server)** | React Query (TanStack Query) |
 | **Database** | PostgreSQL via Supabase |
+| **ORM** | Prisma |
 | **Auth** | Supabase Auth |
 | **Storage** | Supabase Storage |
 | **Deployment** | Vercel |
@@ -31,49 +32,100 @@ LAUF OS is a personal command center for "building in public" - a full-stack web
 ## Commands
 
 ```bash
-npm run dev          # Start dev server at http://localhost:3000
-npm run build        # Production build
-npm run start        # Run production server
-npm run lint         # ESLint
-npm run typecheck    # TypeScript check
-npm run db:types     # Generate Supabase types
-npm run db:migrate   # Push database migrations
+npm run dev              # Start dev server at http://localhost:3000
+npm run build            # Production build (includes prisma generate)
+npm run start            # Run production server
+npm run lint             # ESLint
+npm run typecheck        # TypeScript check
+npm run prisma:generate  # Generate Prisma client
+npm run prisma:migrate   # Run database migrations
+npm run prisma:push      # Push schema to database
+npm run prisma:studio    # Open Prisma Studio
 ```
 
 ## Architecture
 
-### Source Directory Structure
+### 9 Modules
 
-All source code lives in `src/`:
+| # | Module | Description | Phase |
+|---|--------|-------------|-------|
+| 1 | **Command Center** | Daily timeline, 90-min blocks, tasks, goals | Phase 1 |
+| 2 | **Client CRM** | Clients, projects, health scores, opportunities | Phase 1 |
+| 3 | **Creative Library** | Inspirations, templates, AI images, components | Phase 2 |
+| 4 | **Health Tracker** | Workouts, nutrition, sobriety, check-ins | Phase 4 |
+| 5 | **Financial Tracker** | Income, expenses, investments, goals | Phase 4 |
+| 6 | **Intel Feed** | RSS aggregation, AI summaries, bookmarks | Phase 3 |
+| 7 | **Social Manager** | Content queue, scheduling, X API, analytics | Phase 5 |
+| 8 | **AI Hub** | Tool directory, cheat sheets, prompts | Phase 3 |
+| 9 | **Relationships** | Contacts, follow-ups, network mapping | Phase 5 |
+
+### Source Directory Structure
 
 ```
 src/
 ├── app/                    # Next.js App Router
 │   ├── (auth)/             # Auth routes (unprotected)
 │   ├── (dashboard)/        # Protected routes
+│   │   ├── command/        # Command Center (tasks, calendar, goals)
+│   │   ├── clients/        # Client CRM
+│   │   ├── projects/       # Project pipeline
+│   │   └── settings/       # User settings
 │   └── api/                # API routes
+│       ├── tasks/
+│       ├── clients/
+│       ├── projects/
+│       └── goals/
 ├── components/
 │   ├── ui/                 # shadcn/ui primitives
-│   ├── features/           # Feature-specific components
-│   └── layouts/            # Layout components
+│   ├── modules/            # Module-specific components
+│   │   ├── command/        # TimeBlock, TaskCard, TaskForm, etc.
+│   │   └── clients/        # ClientCard, HealthScoreBadge, etc.
+│   ├── layouts/            # Layout components
+│   └── shared/             # Shared components
 ├── lib/
+│   ├── prisma/             # Prisma client
 │   ├── supabase/           # Supabase clients
-│   ├── x-api/              # X API wrapper
 │   ├── ai/                 # AI service clients
 │   ├── validations/        # Zod schemas
 │   └── utils/              # Utility functions
 ├── hooks/                  # React hooks
 ├── stores/                 # Zustand stores
 ├── types/                  # TypeScript types
-├── config/                 # App configuration
-└── constants/              # App constants
+└── config/                 # App configuration
+    ├── navigation.ts       # Sidebar navigation
+    ├── categories.ts       # Task categories with colors
+    └── site.ts             # Site metadata
 ```
 
 ### Path Alias
 
 `@/*` maps to `./src/*`
 
-Example: `import { cn } from '@/lib/utils/cn'`
+Example: `import { cn } from '@/lib/utils'`
+
+## Database Schema
+
+Prisma schema located at `prisma/schema.prisma`. Key models:
+
+### Core Models
+- **User** - App user with preferences and timezone
+- **Task** - 90-min blocks with category, priority, energy level
+- **Goal** - Daily/weekly/monthly/yearly goals with progress
+
+### Client CRM Models
+- **Client** - Client with health score, status, credentials
+- **Project** - Kanban pipeline (Planning → Launched)
+- **Opportunity** - Upsell/expansion opportunities
+- **Asset** - Files linked to clients/projects
+
+### Enums
+- **TaskCategory**: DESIGN, CODE, CLIENT, LEARNING, FITNESS, ADMIN, SAAS, NETWORKING
+- **TaskStatus**: TODO, IN_PROGRESS, BLOCKED, DONE
+- **EnergyLevel**: DEEP_WORK, MODERATE, LIGHT
+- **Priority**: LOW, MEDIUM, HIGH, URGENT
+- **ClientStatus**: ACTIVE, PAUSED, COMPLETED, CHURNED
+- **HealthScore**: GREEN, YELLOW, RED
+- **ProjectStatus**: PLANNING, DESIGN, DEVELOPMENT, REVIEW, LAUNCHED
 
 ## Code Conventions
 
@@ -81,12 +133,11 @@ Example: `import { cn } from '@/lib/utils/cn'`
 
 | Type | Convention | Example |
 |------|------------|---------|
-| Components | PascalCase.tsx | `IdeaCard.tsx` |
+| Components | PascalCase.tsx | `TaskCard.tsx` |
 | Utilities | kebab-case.ts | `format-date.ts` |
-| Hooks | use-kebab-case.ts | `use-ideas.ts` |
-| Types | kebab-case.types.ts | `idea.types.ts` |
-| Validations | kebab-case.schema.ts | `idea.schema.ts` |
-| Constants | SCREAMING_SNAKE_CASE | `PILLAR_COLORS` |
+| Hooks | use-kebab-case.ts | `use-tasks.ts` |
+| Types | kebab-case.types.ts | `task.types.ts` |
+| Validations | kebab-case.schema.ts | `task.schema.ts` |
 
 ### Component Structure
 
@@ -98,15 +149,16 @@ Example: `import { cn } from '@/lib/utils/cn'`
 // 5. Named export
 
 import { useState } from 'react'
-import { Button } from '@/components/ui/Button'
-import type { Idea } from '@/types/idea.types'
+import { Button } from '@/components/ui/button'
+import { getCategoryConfig } from '@/config/categories'
+import type { Task } from '@prisma/client'
 
-interface IdeaCardProps {
-  idea: Idea
+interface TaskCardProps {
+  task: Task
   onEdit?: (id: string) => void
 }
 
-export function IdeaCard({ idea, onEdit }: IdeaCardProps) {
+export function TaskCard({ task, onEdit }: TaskCardProps) {
   // Component logic
 }
 ```
@@ -119,22 +171,21 @@ All endpoints return consistent responses:
 type ApiResponse<T> = {
   data: T | null
   error: string | null
-  message?: string
 }
 ```
 
-## The 4 Content Pillars
+## Task Categories
 
-All content maps to one of these categories:
-
-| Pillar | Color | Description |
-|--------|-------|-------------|
-| **Redesigns** | Pink `#f472b6` | Before/after visual transformations |
-| **Builds** | Purple `#a78bfa` | Progress on side projects |
-| **Workflows** | Cyan `#38bdf8` | Process posts, frameworks, how-tos |
-| **Insights** | Amber `#fbbf24` | Learnings and observations |
-
-Pillar configuration: `src/config/pillars.ts`
+| Category | Color | Icon | Description |
+|----------|-------|------|-------------|
+| **Design** | Purple `#8b5cf6` | Palette | Visual/UI work |
+| **Code** | Blue `#3b82f6` | Code | Development tasks |
+| **Client** | Green `#22c55e` | Users | Client communication |
+| **Learning** | Orange `#f97316` | BookOpen | Courses, reading |
+| **Fitness** | Red `#ef4444` | Dumbbell | Workouts, health |
+| **Admin** | Gray `#6b7280` | FileText | Administrative |
+| **SaaS** | Cyan `#06b6d4` | Rocket | Product building |
+| **Networking** | Pink `#ec4899` | Network | Relationship building |
 
 ## Design System
 
@@ -158,55 +209,63 @@ Pillar configuration: `src/config/pillars.ts`
 
 ## Key Patterns
 
+### 90-Minute Blocks
+
+The core productivity concept. Tasks are scheduled into 90-minute deep work blocks. Each task has:
+- **Category** for color-coding
+- **Priority** for urgency
+- **Energy Level** to match to time of day
+- **Scheduled Time** for calendar placement
+
+### Health Score System
+
+Clients have a health score (GREEN/YELLOW/RED) based on:
+- Payment status (40%)
+- Communication frequency (30%)
+- Project status (20%)
+- Contract renewal (10%)
+
 ### State Management
 
-- **Server state** (React Query): Ideas, feed items, analytics
-- **Client state** (Zustand): UI state, drafts, filters
-
-### Validation
-
-All API inputs validated with Zod schemas in `src/lib/validations/`
+- **Server state** (React Query): Tasks, clients, projects, goals
+- **Client state** (Zustand): UI state, filters, drafts
 
 ### Authentication
 
-- Supabase Auth with RLS policies on all tables
-- Middleware protects `(dashboard)` routes
-- X OAuth tokens encrypted at rest
-
-### Content Lifecycle
-
-```
-Idea → In Progress → Ready → Scheduled → Posted → Analyzed
-```
+- Supabase Auth with middleware protection
+- `(dashboard)` routes are protected
+- Client credentials encrypted at rest
 
 ## Common Tasks
 
-### Adding a New Feature
+### Adding a New Module
 
-1. Create route: `src/app/(dashboard)/{feature}/page.tsx`
-2. Create components: `src/components/features/{feature}/`
-3. Add Zod schema: `src/lib/validations/{feature}.schema.ts`
-4. Add types: `src/types/{feature}.types.ts`
-5. Create API routes: `src/app/api/{feature}/route.ts`
-6. Add hook: `src/hooks/use-{feature}.ts`
-7. Update navigation: `src/config/navigation.ts`
+1. Create route: `src/app/(dashboard)/{module}/page.tsx`
+2. Create components: `src/components/modules/{module}/`
+3. Add Prisma model: `prisma/schema.prisma`
+4. Create API routes: `src/app/api/{module}/route.ts`
+5. Add to navigation: `src/config/navigation.ts`
 
 ### Adding a Database Table
 
-1. Create migration in `supabase/migrations/`
-2. Run `npm run db:migrate`
-3. Generate types: `npm run db:types`
-4. Add RLS policies
-5. Create corresponding types
+1. Add model to `prisma/schema.prisma`
+2. Run `npm run prisma:migrate`
+3. Generate client: `npm run prisma:generate`
 
 ## Security Notes
 
-- Never commit `.env.local`
+- Never commit `.env.local` or `.env`
 - Service role key only in server-side code
-- RLS enabled on all tables
-- X tokens encrypted with AES-256-GCM
-- Cron endpoints authenticated with `CRON_SECRET`
+- Prisma handles database access
+- Client credentials encrypted with AES-256-GCM
 
 ## Current Phase
 
-**MVP Phase 1: Foundation** - See `docs/mvp-checklist.md` for progress
+**Phase 1: Foundation + Daily Driver**
+- [x] Prisma setup with full schema
+- [x] Command Center routes and components
+- [x] Client CRM routes and components
+- [x] Navigation structure
+- [ ] Database migration (waiting for credentials)
+- [ ] Full CRUD operations
+- [ ] React Query integration
