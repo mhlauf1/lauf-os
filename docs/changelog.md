@@ -9,7 +9,58 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-_Next: Wire up task creation, display tasks in timeline_
+_Next: Database migration, drag-and-drop, calendar week view, Client CRM wire-up_
+
+---
+
+## [0.2.0] - 2026-01-26
+
+### Added
+
+**Day Builder + Activity Catalog**
+
+The core Day Builder concept: build your day from a curated catalog of activities, with everything rolling up into monthly goals.
+
+**Activity Model**
+- New `Activity` Prisma model for the reusable activity catalog
+- Fields: title, description, category, defaultDuration, energyLevel, timesUsed, lastUsed
+- Activities pre-fill task creation for rapid day building
+
+**Task + Goal Linking**
+- `activityId` and `goalId` foreign keys on Task model
+- `tasks` relation on Goal model
+- Auto-increment goal `currentValue` when linked task is completed
+- Auto-update activity `timesUsed` and `lastUsed` on task completion
+
+**Activity CRUD API**
+- `GET /api/activities` - List all active activities
+- `POST /api/activities` - Create new activity
+- `PATCH /api/activities/[id]` - Update activity
+- `DELETE /api/activities/[id]` - Delete activity
+
+**Task + Goal Individual APIs**
+- `PATCH /api/tasks/[id]` - Update task (status, fields); auto-increments goal/activity on completion
+- `DELETE /api/tasks/[id]` - Delete task
+- `PATCH /api/goals/[id]` - Update goal progress/completion
+
+**React Query Integration**
+- `use-tasks.ts` - useTasks, useCreateTask, useUpdateTask, useDeleteTask
+- `use-activities.ts` - useActivities, useCreateActivity, useUpdateActivity, useDeleteActivity
+- `use-goals.ts` - useGoals, useCreateGoal, useUpdateGoal
+- QueryClientProvider wired into root layout
+
+**Day Builder Dashboard**
+- Complete rewrite of dashboard as Day Builder
+- Two-column layout: Daily Timeline (2/3) + Goals Panel (1/3)
+- Activity Catalog at bottom for quick block creation
+- Stats cards: blocks completed, monthly goal progress, activity count
+- Click activity → pre-filled task dialog → block created at next available slot
+
+**Components**
+- `ActivityCatalog` - Activity picker grid with category colors, duration, energy, usage counts
+- `ActivityForm` - Create/edit activity dialog
+- `TaskForm` updated with "from activity" quick-create mode and goal linking dropdown
+- `GoalFormDialog` - Inline monthly goal creation
 
 ---
 
@@ -131,6 +182,7 @@ This release pivots LAUF OS from a content-creation tool to a full **Personal Op
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 0.2.0 | 2026-01-26 | Day Builder + Activity Catalog, React Query, full CRUD APIs |
 | 0.1.0 | 2026-01-26 | Pivot to Personal OS, Prisma, new architecture |
 | 0.0.2 | 2026-01-26 | Documentation, src/ structure |
 | 0.0.1 | 2026-01-26 | Initial project setup |
@@ -139,11 +191,11 @@ This release pivots LAUF OS from a content-creation tool to a full **Personal Op
 
 ## Upcoming Versions
 
-### 0.2.0 - Command Center Complete
-- Task creation and scheduling
-- Time block display
-- Goal tracking
-- Calendar view
+### 0.2.1 - Command Center Polish
+- Drag-and-drop reordering
+- Calendar week view
+- Task category filtering
+- Goal completion via UI
 
 ### 0.3.0 - Client CRM Complete
 - Client management

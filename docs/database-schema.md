@@ -22,8 +22,9 @@ LAUF OS uses Prisma 7 as the ORM with PostgreSQL (via Supabase). The schema supp
 | Model | Phase | Status |
 |-------|-------|--------|
 | `User` | MVP | Complete |
-| `Task` | MVP | Complete |
-| `Goal` | MVP | Complete |
+| `Task` | MVP | Complete (+ activityId, goalId) |
+| `Activity` | MVP | Complete |
+| `Goal` | MVP | Complete (+ tasks relation) |
 | `Client` | MVP | Complete |
 | `Project` | MVP | Complete |
 | `Opportunity` | MVP | Complete |
@@ -138,13 +139,15 @@ model User {
 
 ### Task
 
-The core productivity unit - 90-minute time blocks.
+The core productivity unit - 90-minute time blocks. Can link to an Activity (for pre-filling defaults) and a Goal (for auto-incrementing progress on completion).
 
 ```prisma
 model Task {
   id               String       @id @default(uuid())
   userId           String       @map("user_id")
   projectId        String?      @map("project_id")
+  activityId       String?      @map("activity_id")
+  goalId           String?      @map("goal_id")
   title            String
   description      String?
   category         TaskCategory
@@ -159,16 +162,51 @@ model Task {
   createdAt        DateTime     @default(now()) @map("created_at")
   updatedAt        DateTime     @updatedAt @map("updated_at")
 
-  user    User     @relation(...)
-  project Project? @relation(...)
+  user     User      @relation(...)
+  project  Project?  @relation(...)
+  activity Activity? @relation(...)
+  goal     Goal?     @relation(...)
 
   @@index([userId])
+  @@index([activityId])
+  @@index([goalId])
   @@index([scheduledDate])
   @@map("tasks")
 }
 ```
 
+### Activity
+
+A reusable catalog entry. Users build a catalog of activities they do regularly, then select from them to build their day.
+
+```prisma
+model Activity {
+  id              String       @id @default(uuid())
+  userId          String       @map("user_id")
+  title           String
+  description     String?
+  category        TaskCategory
+  defaultDuration Int          @default(90) @map("default_duration")
+  energyLevel     EnergyLevel  @default(MODERATE) @map("energy_level")
+  icon            String?
+  isActive        Boolean      @default(true) @map("is_active")
+  sortOrder       Int          @default(0) @map("sort_order")
+  timesUsed       Int          @default(0) @map("times_used")
+  lastUsed        DateTime?    @map("last_used")
+  createdAt       DateTime     @default(now()) @map("created_at")
+  updatedAt       DateTime     @updatedAt @map("updated_at")
+
+  user  User   @relation(...)
+  tasks Task[]
+
+  @@index([userId])
+  @@map("activities")
+}
+```
+
 ### Goal
+
+Goals track progress toward targets. When a task linked to a goal is completed, the goal's `currentValue` is auto-incremented.
 
 ```prisma
 model Goal {
@@ -184,7 +222,8 @@ model Goal {
   createdAt    DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @updatedAt @map("updated_at")
 
-  user User @relation(...)
+  user  User   @relation(...)
+  tasks Task[]
 
   @@map("goals")
 }

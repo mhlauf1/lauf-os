@@ -72,27 +72,43 @@ The MVP focuses on two core modules:
 
 ## Phase 1: Command Center Core
 
-**Goal**: Functional daily productivity system
+**Goal**: Functional daily productivity system — Day Builder + Activity Catalog
+
+### Day Builder + Activity Catalog
+- [x] Create `Activity` model in Prisma schema
+- [x] Add `activityId` and `goalId` to `Task` model
+- [x] Add `tasks` relation to `Goal` model
+- [x] Create Activity CRUD API (`/api/activities`, `/api/activities/[id]`)
+- [x] Create Task individual API (`/api/tasks/[id]` — PATCH, DELETE)
+- [x] Create Goal individual API (`/api/goals/[id]` — PATCH)
+- [x] Create React Query hooks (`use-tasks`, `use-activities`, `use-goals`)
+- [x] Wire QueryClientProvider into root layout
+- [x] Build `ActivityCatalog` component (activity picker grid)
+- [x] Build `ActivityForm` component (create/edit activity dialog)
+- [x] Update `TaskForm` with "from activity" quick-create mode + goal linking
+- [x] Build Day Builder dashboard (timeline + goals panel + catalog)
+- [x] Auto-increment goal progress on task completion
+- [x] Auto-update activity usage stats on task completion
 
 ### Task Management
-- [ ] Wire up TaskForm to create tasks via API
-- [ ] Display tasks in DailyTimeline by scheduled time
-- [ ] Implement task status transitions (TODO → IN_PROGRESS → DONE)
+- [x] Wire up TaskForm to create tasks via API
+- [x] Display tasks in DailyTimeline by scheduled time
+- [x] Implement task status transitions (TODO → IN_PROGRESS → DONE)
 - [ ] Add task category filtering
 - [ ] Implement drag-and-drop reordering
-- [ ] Add task completion (mark done, record completedAt)
+- [x] Add task completion (mark done, record completedAt)
 
 ### Time Blocking
-- [ ] Display 90-minute blocks on timeline
-- [ ] Allow scheduling tasks to specific time slots
-- [ ] Show energy level indicators
-- [ ] Support different block durations (45, 90, 120 min)
+- [x] Display 90-minute blocks on timeline
+- [x] Allow scheduling tasks to specific time slots
+- [x] Show energy level indicators
+- [x] Support different block durations (45, 90, 120 min)
 
 ### Goals
-- [ ] Create daily goals
-- [ ] Track goal progress (currentValue/targetValue)
-- [ ] Display goals in sidebar widget
-- [ ] Mark goals complete
+- [x] Create monthly goals
+- [x] Track goal progress (currentValue/targetValue)
+- [x] Display goals in sidebar widget
+- [ ] Mark goals complete via UI
 
 ### Calendar View
 - [ ] Week view with days as columns
@@ -159,9 +175,9 @@ The MVP focuses on two core modules:
 When complete, the app should:
 
 - [x] Allow user login via Supabase Auth
-- [ ] Create and schedule tasks in 90-minute blocks
-- [ ] View daily timeline with tasks
-- [ ] Track daily/weekly goals
+- [x] Create and schedule tasks in 90-minute blocks
+- [x] View daily timeline with tasks
+- [x] Track monthly goals with auto-incrementing progress
 - [ ] Manage clients with health scores
 - [ ] Track projects in pipeline view
 - [ ] Navigate between all MVP routes
@@ -183,6 +199,7 @@ When complete, the app should:
 ## Notes
 
 - **2026-01-26**: Completed infrastructure pivot. Prisma schema with 16+ models, new route structure, core components built, user creation trigger fixed.
+- **2026-01-26**: Implemented Day Builder + Activity Catalog. Activity model, full CRUD APIs for activities/tasks/goals, React Query hooks, Day Builder dashboard with timeline + goals + activity catalog. Task completion auto-increments goals and activity usage.
 - Focus on functionality over polish in MVP
 - Document any blockers or decisions made
 
@@ -190,10 +207,11 @@ When complete, the app should:
 
 ## Next Steps
 
-1. Wire up TaskForm to create tasks via API
-2. Fetch and display tasks in DailyTimeline
-3. Implement task status transitions
-4. Add task completion functionality
+1. Run database migration for Activity model + Task/Goal schema changes
+2. Add drag-and-drop reordering for timeline blocks
+3. Add task category filtering
+4. Build calendar week view
+5. Start Client CRM wire-up
 
 ---
 
