@@ -1,12 +1,20 @@
 # Next Session Plan
 
-> **Previous Session:** Goal Progress & Cascades (2026-01-28) — Complete
+> **Previous Session:** Multi-Task Time Slots (2026-01-28) — Complete
 >
-> Branch: `feat/goal-progress-and-cascades`
+> Branch: `feat/wed-morning`
 
 ---
 
 ## What Was Completed
+
+### Multi-Task Time Slots (v0.9.0)
+- Removed `@@unique([userId, scheduledDate, slotIndex])` constraint from Task model
+- Removed slot conflict validation from `POST /api/tasks` and `PATCH /api/tasks/[id]`
+- `DailyTimeline` supports multiple tasks per slot (`Map<number, Task[]>`)
+- `TimeSlotRow` renders tasks as horizontal flex row with always-visible "+" button
+- `TimeBlock` added `compact` prop for horizontal label style (smaller padding, truncated title, click-to-edit)
+- Multiple tasks per slot displayed as compact horizontal labels with category-colored left border
 
 ### Goal Progress & Cascades (v0.8.0)
 - Goal model: added `startDate` for pace tracking, `libraryItems` relation

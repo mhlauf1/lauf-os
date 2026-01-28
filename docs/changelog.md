@@ -13,6 +13,35 @@ _Next: Database migration, X/Twitter API integration, Intel Feed + AI Hub (Phase
 
 ---
 
+## [0.9.0] - 2026-01-28
+
+### Added
+
+**Multi-Task Time Slots**
+
+Time slots now support multiple tasks displayed as compact horizontal labels, enabling parallel work tracking within the same time block.
+
+**Schema Changes**
+- Removed `@@unique([userId, scheduledDate, slotIndex])` constraint from Task model
+- Tasks can now share the same slot on the same day
+
+**API Changes**
+- `POST /api/tasks` — removed slot conflict validation, multiple tasks per slot allowed
+- `PATCH /api/tasks/[id]` — removed slot conflict validation when moving tasks
+
+**Component Updates**
+- `DailyTimeline` — `tasksBySlot` changed from `Map<number, Task>` to `Map<number, Task[]>`
+- `TimeSlotRow` — renders tasks as horizontal flex row with compact labels + always-visible "+" button
+- `TimeBlock` — added `compact` prop for horizontal label style (smaller padding, truncated title, click-to-edit)
+
+**UX Improvements**
+- Multiple tasks per slot displayed as compact horizontal labels with category-colored left border
+- "+" button always visible when tasks exist in a slot
+- Click any task to edit
+- Drag activities to slots with existing tasks to add more
+
+---
+
 ## [0.8.0] - 2026-01-28
 
 ### Added
@@ -423,6 +452,7 @@ This release pivots LAUF OS from a content-creation tool to a full **Personal Op
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 0.9.0 | 2026-01-28 | Multi-Task Time Slots (multiple tasks per slot, compact TimeBlock mode, flexible scheduling) |
 | 0.8.0 | 2026-01-28 | Goal Progress & Cascades (pace tracking, library-goal linking, cascade effects, GoalCard/GoalProgressBar) |
 | 0.7.0 | 2026-01-27 | Activity Presets (19 fixed presets replacing user-created catalog), TimeBlock category colors |
 | 0.6.0 | 2026-01-27 | Tweet Drafts module (Social Manager), TaskBacklog, calendar redesign, new UI components |
@@ -438,7 +468,7 @@ This release pivots LAUF OS from a content-creation tool to a full **Personal Op
 
 ## Upcoming Versions
 
-### 0.9.0 - Intel Feed & AI Hub
+### 0.10.0 - Intel Feed & AI Hub
 - RSS feeds
 - Article summaries
 - AI tool tracking

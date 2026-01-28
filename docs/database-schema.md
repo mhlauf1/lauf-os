@@ -147,7 +147,7 @@ model User {
 
 ### Task
 
-The core productivity unit - 90-minute time blocks. Can link to an Activity (for pre-filling defaults) and a Goal (for auto-incrementing progress on completion).
+The core productivity unit - 90-minute time blocks. Can link to an Activity (for pre-filling defaults) and a Goal (for auto-incrementing progress on completion). **Multiple tasks can be scheduled in the same time slot** for parallel work tracking.
 
 ```prisma
 model Task {
@@ -162,7 +162,7 @@ model Task {
   priority         Priority     @default(MEDIUM)
   status           TaskStatus   @default(TODO)
   scheduledDate    DateTime?    @map("scheduled_date") @db.Date
-  scheduledTime    String?      @map("scheduled_time") // "09:00"
+  slotIndex        Int?         @map("slot_index") // 0-9 for fixed 90-min slots
   timeBlockMinutes Int          @default(90) @map("time_block_minutes")
   energyLevel      EnergyLevel  @default(MODERATE) @map("energy_level")
   linkedAssets     String[]     @default([]) @map("linked_assets")
@@ -174,6 +174,9 @@ model Task {
   project  Project?  @relation(...)
   activity Activity? @relation(...)
   goal     Goal?     @relation(...)
+
+  // Note: No unique constraint on (userId, scheduledDate, slotIndex)
+  // Multiple tasks per slot are allowed for parallel work tracking
 
   @@index([userId])
   @@index([activityId])

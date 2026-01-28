@@ -106,12 +106,6 @@ enum LibraryItemType {
   IDEA
 }
 
-enum TweetDraftStatus {
-  DRAFT
-  READY
-  POSTED
-  ARCHIVED
-}
 
 // ============================================================================
 // CORE MODELS
@@ -139,7 +133,6 @@ model User {
   transactions  Transaction[]
   contacts      Contact[]
   socialPosts   SocialPost[]
-  tweetDrafts   TweetDraft[]
   feedSources   FeedSource[]
   aiTools       AITool[]
 
@@ -158,7 +151,8 @@ model Task {
   priority         Priority     @default(MEDIUM)
   status           TaskStatus   @default(TODO)
   scheduledDate    DateTime?    @map("scheduled_date") @db.Date
-  scheduledTime    String?      @map("scheduled_time") // "09:00" format
+  scheduledTime    String?      @map("scheduled_time") // "09:00" format - DEPRECATED, use slotIndex
+  slotIndex        Int?         @map("slot_index") // 0-9 for fixed 90-min slots
   timeBlockMinutes Int          @default(90) @map("time_block_minutes")
   energyLevel      EnergyLevel  @default(MODERATE) @map("energy_level")
   linkedAssets     String[]     @default([]) @map("linked_assets")
@@ -206,20 +200,19 @@ model Goal {
 }
 
 model Activity {
-  id              String       @id @default(uuid())
-  userId          String       @map("user_id")
-  title           String
-  description     String?
-  category        TaskCategory
-  defaultDuration Int          @default(90) @map("default_duration")
-  energyLevel     EnergyLevel  @default(MODERATE) @map("energy_level")
-  icon            String?
-  isActive        Boolean      @default(true) @map("is_active")
-  sortOrder       Int          @default(0) @map("sort_order")
-  timesUsed       Int          @default(0) @map("times_used")
-  lastUsed        DateTime?    @map("last_used")
-  createdAt       DateTime     @default(now()) @map("created_at")
-  updatedAt       DateTime     @updatedAt @map("updated_at")
+  id          String       @id @default(uuid())
+  userId      String       @map("user_id")
+  title       String
+  description String?
+  category    TaskCategory
+  energyLevel EnergyLevel  @default(MODERATE) @map("energy_level")
+  icon        String?
+  isActive    Boolean      @default(true) @map("is_active")
+  sortOrder   Int          @default(0) @map("sort_order")
+  timesUsed   Int          @default(0) @map("times_used")
+  lastUsed    DateTime?    @map("last_used")
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
 
   // Relations
   user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -507,25 +500,6 @@ model SocialPost {
   @@map("social_posts")
 }
 
-model TweetDraft {
-  id          String           @id @default(uuid())
-  userId      String           @map("user_id")
-  content     String
-  tweetNumber Int              @default(1) @map("tweet_number")
-  totalTweets Int              @default(1) @map("total_tweets")
-  status      TweetDraftStatus @default(DRAFT)
-  tags        String[]         @default([])
-  postedAt    DateTime?        @map("posted_at")
-  createdAt   DateTime         @default(now()) @map("created_at")
-  updatedAt   DateTime         @updatedAt @map("updated_at")
-
-  // Relations
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([status])
-  @@map("tweet_drafts")
-}
 
 // ============================================================================
 // INTEL FEED MODELS

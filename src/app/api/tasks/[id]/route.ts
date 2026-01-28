@@ -24,15 +24,10 @@ const updateTaskSchema = z.object({
   priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'URGENT']).optional(),
   status: z.enum(['TODO', 'IN_PROGRESS', 'BLOCKED', 'DONE']).optional(),
   scheduledDate: z.string().datetime().optional().nullable(),
-  scheduledTime: z
-    .string()
-    .regex(/^\d{2}:\d{2}$/)
-    .optional()
-    .nullable(),
-  timeBlockMinutes: z.number().int().min(15).max(480).optional(),
+  slotIndex: z.number().int().min(0).max(9).optional().nullable(),
   energyLevel: z.enum(['DEEP_WORK', 'MODERATE', 'LIGHT']).optional(),
   projectId: z.string().uuid().optional().nullable(),
-  activityId: z.string().uuid().optional().nullable(),
+  activityId: z.string().optional().nullable(), // Accepts preset-{slug} format or UUID
   goalId: z.string().uuid().optional().nullable(),
 })
 
@@ -96,88 +91,41 @@ export async function PATCH(
     // Side effects on completion
     if (isCompletingTask) {
       const goalId = validatedData.goalId ?? existing.goalId
-      const activityId = validatedData.activityId ?? existing.activityId
-
-      const sideEffects: Promise<unknown>[] = []
 
       // Auto-increment linked goal's currentValue
       if (goalId) {
-        sideEffects.push(
-          prisma.goal.update({
+        const goal = await prisma.goal.update({
+          where: { id: goalId },
+          data: { currentValue: { increment: 1 } },
+        })
+        // Auto-complete goal if target reached
+        if (goal.targetValue && goal.currentValue >= goal.targetValue && !goal.completedAt) {
+          await prisma.goal.update({
             where: { id: goalId },
-            data: { currentValue: { increment: 1 } },
-          }).then(async (goal) => {
-            // Auto-complete goal if target reached
-            if (goal.targetValue && goal.currentValue >= goal.targetValue && !goal.completedAt) {
-              await prisma.goal.update({
-                where: { id: goalId },
-                data: { completedAt: new Date() },
-              })
-            }
+            data: { completedAt: new Date() },
           })
-        )
-      }
-
-      // Update activity usage stats
-      if (activityId) {
-        sideEffects.push(
-          prisma.activity.update({
-            where: { id: activityId },
-            data: {
-              timesUsed: { increment: 1 },
-              lastUsed: new Date(),
-            },
-          })
-        )
-      }
-
-      if (sideEffects.length > 0) {
-        await Promise.all(sideEffects)
+        }
       }
     }
 
     // Side effects on revert
     if (isRevertingTask) {
       const goalId = existing.goalId
-      const activityId = existing.activityId
-
-      const sideEffects: Promise<unknown>[] = []
 
       // Decrement linked goal's currentValue
       if (goalId) {
-        sideEffects.push(
-          prisma.goal.findUnique({ where: { id: goalId } }).then(async (goal) => {
-            if (!goal) return
-            const newValue = Math.max(0, goal.currentValue - 1)
-            await prisma.goal.update({
-              where: { id: goalId },
-              data: {
-                currentValue: newValue,
-                // Reopen goal if it was auto-completed
-                ...(goal.completedAt ? { completedAt: null } : {}),
-              },
-            })
+        const goal = await prisma.goal.findUnique({ where: { id: goalId } })
+        if (goal) {
+          const newValue = Math.max(0, goal.currentValue - 1)
+          await prisma.goal.update({
+            where: { id: goalId },
+            data: {
+              currentValue: newValue,
+              // Reopen goal if it was auto-completed
+              ...(goal.completedAt ? { completedAt: null } : {}),
+            },
           })
-        )
-      }
-
-      // Decrement activity usage
-      if (activityId) {
-        sideEffects.push(
-          prisma.activity.findUnique({ where: { id: activityId } }).then(async (activity) => {
-            if (!activity) return
-            await prisma.activity.update({
-              where: { id: activityId },
-              data: {
-                timesUsed: Math.max(0, activity.timesUsed - 1),
-              },
-            })
-          })
-        )
-      }
-
-      if (sideEffects.length > 0) {
-        await Promise.all(sideEffects)
+        }
       }
     }
 
