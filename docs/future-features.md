@@ -208,6 +208,10 @@ LAUF OS is designed as a **Personal Operating System** with 9 core modules:
 | 2026-01-27 | TweetDraft separate from SocialPost | SocialPost is for published posts with platform data; TweetDraft is for pre-publish workflow |
 | 2026-01-27 | 280-char Zod validation | Enforce Twitter character limit at schema level, with visual warnings at 260+ |
 | 2026-01-27 | Continuous calendar timeline | Proportional positioning (6 AM–11 PM) instead of discrete time slots for more accurate task visualization |
+| 2026-01-28 | Goal cascades with pace tracking | computeBreakdown() utility computes expectedByNow based on startDate/dueDate, enables on-track/behind status |
+| 2026-01-28 | Atomic goal increments via incrementValue | PATCH endpoint accepts incrementValue for safe concurrent updates instead of direct currentValue overwrites |
+| 2026-01-28 | Library-goal linking | LibraryItem.goalId links items to goals, auto-increments progress — same pattern as task-goal linking |
+| 2026-01-28 | Goal perspective views | Month/Week/Day perspectives group goals as primary/secondary for focused views instead of flat type tabs |
 
 ---
 
@@ -221,4 +225,4 @@ _Space to log feature requests as they come up_
 
 ---
 
-_Last updated: January 2026 (v0.6.0)_
+_Last updated: January 2026 (v0.8.0)_

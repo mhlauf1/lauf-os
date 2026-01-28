@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/dialog'
 import { TagInput } from './TagInput'
 import { libraryTypeList } from '@/config/library'
-import type { LibraryItem, LibraryItemType } from '@prisma/client'
+import type { LibraryItem, LibraryItemType, Goal } from '@prisma/client'
 
 interface LibraryItemFormData {
   type: LibraryItemType
@@ -30,6 +30,7 @@ interface LibraryItemFormData {
   isShowcased: boolean
   isForSale: boolean
   price: string
+  goalId: string
 }
 
 export interface LibraryFormPayload {
@@ -46,6 +47,7 @@ export interface LibraryFormPayload {
   isShowcased: boolean
   isForSale: boolean
   price?: number
+  goalId?: string
 }
 
 interface LibraryItemFormProps {
@@ -54,6 +56,7 @@ interface LibraryItemFormProps {
   onSubmit: (data: LibraryFormPayload) => void
   initialData?: LibraryItem | null
   isEditing?: boolean
+  goals?: Goal[]
 }
 
 function getDefaultFormData(initialData?: LibraryItem | null): LibraryItemFormData {
@@ -72,6 +75,7 @@ function getDefaultFormData(initialData?: LibraryItem | null): LibraryItemFormDa
       isShowcased: initialData.isShowcased,
       isForSale: initialData.isForSale,
       price: initialData.price != null ? String(Number(initialData.price)) : '',
+      goalId: (initialData as any).goalId || '',
     }
   }
 
@@ -89,6 +93,7 @@ function getDefaultFormData(initialData?: LibraryItem | null): LibraryItemFormDa
     isShowcased: false,
     isForSale: false,
     price: '',
+    goalId: '',
   }
 }
 
@@ -98,6 +103,7 @@ export function LibraryItemForm({
   onSubmit,
   initialData,
   isEditing = false,
+  goals = [],
 }: LibraryItemFormProps) {
   const [formData, setFormData] = useState<LibraryItemFormData>(
     getDefaultFormData(initialData)
@@ -133,6 +139,9 @@ export function LibraryItemForm({
     if (formData.techStack.length > 0) payload.techStack = formData.techStack
     if (formData.isForSale && formData.price) {
       payload.price = parseFloat(formData.price)
+    }
+    if (formData.goalId) {
+      payload.goalId = formData.goalId
     }
 
     onSubmit(payload)
@@ -304,6 +313,44 @@ export function LibraryItemForm({
                 }
                 placeholder="Add technology and press Enter..."
               />
+            </div>
+          )}
+
+          {/* Goal Link */}
+          {goals.length > 0 && (
+            <div className="space-y-2">
+              <Label htmlFor="lib-goalId">Link to Goal (optional)</Label>
+              <select
+                id="lib-goalId"
+                value={formData.goalId}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, goalId: e.target.value }))
+                }
+                className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
+              >
+                <option value="">No goal</option>
+                {(['MONTHLY', 'WEEKLY', 'DAILY', 'YEARLY'] as const).map((type) => {
+                  const typeGoals = goals.filter((g) => g.type === type)
+                  if (typeGoals.length === 0) return null
+                  return (
+                    <optgroup key={type} label={type.charAt(0) + type.slice(1).toLowerCase()}>
+                      {typeGoals.map((goal) => (
+                        <option key={goal.id} value={goal.id}>
+                          {goal.title}
+                          {goal.targetValue
+                            ? ` (${goal.currentValue}/${goal.targetValue})`
+                            : ''}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )
+                })}
+              </select>
+              {formData.goalId && (
+                <p className="text-[10px] text-text-tertiary">
+                  Creating this item will count toward goal progress.
+                </p>
+              )}
             </div>
           )}
 

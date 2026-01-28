@@ -26,6 +26,9 @@ export async function GET(
         assets: {
           orderBy: { createdAt: 'desc' },
         },
+        goal: {
+          select: { id: true, title: true, type: true, targetValue: true, currentValue: true },
+        },
         _count: {
           select: { assets: true },
         },
@@ -85,6 +88,41 @@ export async function PATCH(
       data: validatedData,
     })
 
+    // Handle goalId changes: decrement old goal, increment new goal
+    const oldGoalId = existing.goalId
+    const newGoalId = validatedData.goalId
+
+    if (newGoalId !== undefined && oldGoalId !== newGoalId) {
+      // Decrement old goal
+      if (oldGoalId) {
+        const oldGoal = await prisma.goal.findUnique({ where: { id: oldGoalId } })
+        if (oldGoal) {
+          const newValue = Math.max(0, oldGoal.currentValue - 1)
+          await prisma.goal.update({
+            where: { id: oldGoalId },
+            data: {
+              currentValue: newValue,
+              ...(oldGoal.completedAt ? { completedAt: null } : {}),
+            },
+          })
+        }
+      }
+
+      // Increment new goal
+      if (newGoalId) {
+        const newGoal = await prisma.goal.update({
+          where: { id: newGoalId },
+          data: { currentValue: { increment: 1 } },
+        })
+        if (newGoal.targetValue && newGoal.currentValue >= newGoal.targetValue && !newGoal.completedAt) {
+          await prisma.goal.update({
+            where: { id: newGoalId },
+            data: { completedAt: new Date() },
+          })
+        }
+      }
+    }
+
     return NextResponse.json({ data: item })
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -123,6 +161,21 @@ export async function DELETE(
 
     if (!existing) {
       return NextResponse.json({ error: 'Item not found' }, { status: 404 })
+    }
+
+    // Decrement linked goal if present
+    if (existing.goalId) {
+      const goal = await prisma.goal.findUnique({ where: { id: existing.goalId } })
+      if (goal) {
+        const newValue = Math.max(0, goal.currentValue - 1)
+        await prisma.goal.update({
+          where: { id: existing.goalId },
+          data: {
+            currentValue: newValue,
+            ...(goal.completedAt ? { completedAt: null } : {}),
+          },
+        })
+      }
     }
 
     await prisma.libraryItem.delete({ where: { id } })

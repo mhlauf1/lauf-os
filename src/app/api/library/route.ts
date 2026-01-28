@@ -99,8 +99,24 @@ export async function POST(request: NextRequest) {
         isShowcased: validatedData.isShowcased ?? false,
         isForSale: validatedData.isForSale ?? false,
         price: validatedData.price,
+        goalId: validatedData.goalId || null,
       },
     })
+
+    // Increment linked goal progress
+    if (validatedData.goalId) {
+      const goal = await prisma.goal.update({
+        where: { id: validatedData.goalId },
+        data: { currentValue: { increment: 1 } },
+      })
+      // Auto-complete goal if target reached
+      if (goal.targetValue && goal.currentValue >= goal.targetValue && !goal.completedAt) {
+        await prisma.goal.update({
+          where: { id: validatedData.goalId },
+          data: { completedAt: new Date() },
+        })
+      }
+    }
 
     return NextResponse.json({ data: item }, { status: 201 })
   } catch (error) {
