@@ -1,6 +1,6 @@
 'use client'
 
-import { Zap, Clock } from 'lucide-react'
+import { Zap } from 'lucide-react'
 import { useDraggable } from '@dnd-kit/core'
 import { CSS } from '@dnd-kit/utilities'
 import { cn } from '@/lib/utils'
@@ -39,9 +39,9 @@ export function ActivityCatalogContent({
         </div>
       ) : (
         <div className={cn(
-          'grid gap-3',
+          'grid gap-2',
           compact
-            ? 'grid-cols-1 sm:grid-cols-2'
+            ? 'grid-cols-1'
             : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4'
         )}>
           {activities.map((activity) => (
@@ -139,20 +139,10 @@ export function ActivityCardInner({
           >
             {categoryConfig.label}
           </Badge>
-          <span className="flex items-center gap-0.5 text-[10px] text-text-tertiary">
-            <Clock className="h-3 w-3" />
-            {activity.defaultDuration}m
-          </span>
           <span className="text-[10px] text-text-tertiary">
             {energyLabels[activity.energyLevel]}
           </span>
         </div>
-
-        {activity.timesUsed > 0 && (
-          <p className="text-[10px] text-text-tertiary">
-            used {activity.timesUsed}x
-          </p>
-        )}
       </div>
     </button>
   )

@@ -1,40 +1,52 @@
 'use client'
 
 import { useState } from 'react'
-import { Zap, CheckSquare } from 'lucide-react'
+import { Zap, Target, Plus } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 import { ActivityCatalogContent } from './ActivityCatalog'
-import { TaskBacklogContent } from './TaskBacklog'
-import type { Activity, Task } from '@prisma/client'
+import { GoalsPanelContent } from './GoalsPanel'
+import type { Activity } from '@prisma/client'
+import type { GoalWithCounts } from '@/hooks/use-goals'
 
-type SidebarTab = 'activities' | 'tasks'
+type SidebarTab = 'activities' | 'goals'
 
 interface CommandSidebarProps {
   activities: Activity[]
+  goals: GoalWithCounts[]
   onSelectActivity: (activity: Activity) => void
-  backlogTasks?: Task[]
+  onAddGoal?: () => void
 }
 
 export function CommandSidebar({
   activities,
+  goals,
   onSelectActivity,
-  backlogTasks = [],
+  onAddGoal,
 }: CommandSidebarProps) {
   const [activeTab, setActiveTab] = useState<SidebarTab>('activities')
 
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <div className="flex items-center gap-2">
-          {activeTab === 'activities' ? (
-            <Zap className="h-4 w-4 text-text-tertiary" />
-          ) : (
-            <CheckSquare className="h-4 w-4 text-text-tertiary" />
+    <Card className="h-full flex flex-col">
+      <CardHeader className="pb-3 shrink-0">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            {activeTab === 'activities' ? (
+              <Zap className="h-4 w-4 text-text-tertiary" />
+            ) : (
+              <Target className="h-4 w-4 text-text-tertiary" />
+            )}
+            <CardTitle className="text-base">
+              {activeTab === 'activities' ? 'Activities' : 'Goals'}
+            </CardTitle>
+          </div>
+          {activeTab === 'goals' && onAddGoal && (
+            <Button variant="ghost" size="sm" onClick={onAddGoal}>
+              <Plus className="h-4 w-4 mr-1" />
+              Add
+            </Button>
           )}
-          <CardTitle className="text-base">
-            {activeTab === 'activities' ? 'Activities' : 'Tasks'}
-          </CardTitle>
         </div>
         {/* Tab Toggle */}
         <div className="flex gap-1 rounded-lg bg-surface-elevated p-1 mt-2">
@@ -50,24 +62,24 @@ export function CommandSidebar({
             Activities
           </button>
           <button
-            onClick={() => setActiveTab('tasks')}
+            onClick={() => setActiveTab('goals')}
             className={cn(
               'flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
-              activeTab === 'tasks'
+              activeTab === 'goals'
                 ? 'bg-surface text-text-primary shadow-sm'
                 : 'text-text-secondary hover:text-text-primary'
             )}
           >
-            Tasks
-            {backlogTasks.length > 0 && (
+            Goals
+            {goals.length > 0 && (
               <span className="ml-1 text-[10px] text-text-tertiary">
-                ({backlogTasks.length})
+                ({goals.filter((g) => !g.completedAt).length})
               </span>
             )}
           </button>
         </div>
       </CardHeader>
-      <CardContent className="max-h-[calc(100vh-200px)] overflow-y-auto">
+      <CardContent className="flex-1 overflow-y-auto">
         {activeTab === 'activities' ? (
           <ActivityCatalogContent
             activities={activities}
@@ -75,7 +87,7 @@ export function CommandSidebar({
             compact
           />
         ) : (
-          <TaskBacklogContent tasks={backlogTasks} />
+          <GoalsPanelContent goals={goals} />
         )}
       </CardContent>
     </Card>

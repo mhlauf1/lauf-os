@@ -37,8 +37,7 @@ interface CreateTaskData {
   priority?: string
   status?: string
   scheduledDate?: string
-  scheduledTime?: string
-  timeBlockMinutes?: number
+  slotIndex?: number
   energyLevel?: string
   projectId?: string
   activityId?: string
@@ -64,8 +63,7 @@ interface UpdateTaskData {
   priority?: string
   status?: string
   scheduledDate?: string | null
-  scheduledTime?: string | null
-  timeBlockMinutes?: number
+  slotIndex?: number | null
   energyLevel?: string
   projectId?: string | null
   activityId?: string | null
