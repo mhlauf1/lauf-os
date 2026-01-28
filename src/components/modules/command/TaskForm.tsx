@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Check, ChevronsUpDown, Clock, Plus } from 'lucide-react'
+import { Check, ChevronsUpDown, Plus } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -35,6 +35,7 @@ import {
   CommandList,
 } from '@/components/ui/command'
 import { categoryList, getCategoryConfig } from '@/config/categories'
+import { TIME_SLOTS, getSlotTimeRange } from '@/config/time-slots'
 import type { Priority, EnergyLevel, Activity, Goal, Task } from '@prisma/client'
 
 export interface TaskFormData {
@@ -43,9 +44,8 @@ export interface TaskFormData {
   category: string
   priority: Priority
   energyLevel: EnergyLevel
-  timeBlockMinutes: number
   scheduledDate: string
-  scheduledTime: string
+  slotIndex?: number
   activityId?: string
   goalId?: string
 }
@@ -60,12 +60,10 @@ interface TaskFormProps {
   goals?: Goal[]
   activities?: Activity[]
   backlogTasks?: Task[]
-  onScheduleExistingTask?: (taskId: string, scheduledDate: string, scheduledTime: string) => void
+  onScheduleExistingTask?: (taskId: string, scheduledDate: string, slotIndex: number) => void
 }
 
 type FormTab = 'catalog' | 'manual' | 'tasks'
-
-const timeOptions = [30, 45, 60, 90, 120, 180]
 
 const PRESET_COLORS = [
   '#3b82f6', '#8b5cf6', '#22c55e', '#f97316', '#ef4444',
@@ -83,9 +81,8 @@ function getDefaultFormData(
       category: fromActivity.category,
       priority: 'MEDIUM',
       energyLevel: fromActivity.energyLevel,
-      timeBlockMinutes: fromActivity.defaultDuration,
       scheduledDate: initialData?.scheduledDate || '',
-      scheduledTime: initialData?.scheduledTime || '',
+      slotIndex: initialData?.slotIndex,
       activityId: fromActivity.id,
       goalId: initialData?.goalId || '',
     }
@@ -97,9 +94,8 @@ function getDefaultFormData(
     category: initialData?.category || 'CODE',
     priority: initialData?.priority || 'MEDIUM',
     energyLevel: initialData?.energyLevel || 'MODERATE',
-    timeBlockMinutes: initialData?.timeBlockMinutes || 90,
     scheduledDate: initialData?.scheduledDate || '',
-    scheduledTime: initialData?.scheduledTime || '',
+    slotIndex: initialData?.slotIndex,
     activityId: initialData?.activityId || '',
     goalId: initialData?.goalId || '',
   }
@@ -117,7 +113,7 @@ export function TaskForm({
   backlogTasks = [],
   onScheduleExistingTask,
 }: TaskFormProps) {
-  const formKey = open ? `${fromActivity?.id ?? 'manual'}-${initialData?.scheduledTime ?? ''}` : 'closed'
+  const formKey = open ? `${fromActivity?.id ?? 'manual'}-${initialData?.slotIndex ?? ''}` : 'closed'
   const [formData, setFormData] = useState<TaskFormData>(
     getDefaultFormData(initialData, fromActivity)
   )
@@ -150,9 +146,8 @@ export function TaskForm({
       category: activity.category,
       priority: 'MEDIUM',
       energyLevel: activity.energyLevel,
-      timeBlockMinutes: activity.defaultDuration,
       scheduledDate: formData.scheduledDate,
-      scheduledTime: formData.scheduledTime,
+      slotIndex: formData.slotIndex,
       activityId: activity.id,
       goalId: formData.goalId,
     })
@@ -160,8 +155,8 @@ export function TaskForm({
   }
 
   function handlePickTask(task: Task) {
-    if (onScheduleExistingTask) {
-      onScheduleExistingTask(task.id, formData.scheduledDate, formData.scheduledTime)
+    if (onScheduleExistingTask && formData.slotIndex !== undefined) {
+      onScheduleExistingTask(task.id, formData.scheduledDate, formData.slotIndex)
     }
   }
 
@@ -275,61 +270,16 @@ export function TaskForm({
               />
             </div>
 
-            {/* Category + Time Block — 2-column row */}
-            {isFromActivity ? (
-              /* Activity-based: only show duration (category auto-set) */
+            {/* Category — only for manual creation */}
+            {!isFromActivity && (
               <div className="space-y-2">
-                <Label>Duration</Label>
-                <Select
-                  value={String(formData.timeBlockMinutes)}
-                  onValueChange={(value) =>
-                    setFormData((prev) => ({ ...prev, timeBlockMinutes: Number(value) }))
+                <Label>Category</Label>
+                <CategoryCombobox
+                  value={formData.category}
+                  onChange={(value) =>
+                    setFormData((prev) => ({ ...prev, category: value }))
                   }
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {timeOptions.map((mins) => (
-                      <SelectItem key={mins} value={String(mins)}>
-                        {mins}m
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Category</Label>
-                  <CategoryCombobox
-                    value={formData.category}
-                    onChange={(value) =>
-                      setFormData((prev) => ({ ...prev, category: value }))
-                    }
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Time Block</Label>
-                  <Select
-                    value={String(formData.timeBlockMinutes)}
-                    onValueChange={(value) =>
-                      setFormData((prev) => ({ ...prev, timeBlockMinutes: Number(value) }))
-                    }
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {timeOptions.map((mins) => (
-                        <SelectItem key={mins} value={String(mins)}>
-                          {mins}m
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                />
               </div>
             )}
 
@@ -350,18 +300,27 @@ export function TaskForm({
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="scheduledTime">Time</Label>
-                <Input
-                  id="scheduledTime"
-                  type="time"
-                  value={formData.scheduledTime}
-                  onChange={(e) =>
+                <Label htmlFor="slotIndex">Time Slot</Label>
+                <Select
+                  value={formData.slotIndex !== undefined ? String(formData.slotIndex) : ''}
+                  onValueChange={(value) =>
                     setFormData((prev) => ({
                       ...prev,
-                      scheduledTime: e.target.value,
+                      slotIndex: value ? Number(value) : undefined,
                     }))
                   }
-                />
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select slot" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TIME_SLOTS.map((slot) => (
+                      <SelectItem key={slot.index} value={String(slot.index)}>
+                        {getSlotTimeRange(slot.index)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
@@ -628,10 +587,6 @@ function CatalogPicker({
                 >
                   {cat.label}
                 </Badge>
-                <span className="flex items-center gap-0.5 text-[10px] text-text-tertiary">
-                  <Clock className="h-3 w-3" />
-                  {activity.defaultDuration}m
-                </span>
                 <span className="text-[10px] text-text-tertiary">
                   {energyLabelsMap[activity.energyLevel]}
                 </span>
@@ -685,10 +640,6 @@ function TaskPicker({
                 >
                   {cat.label}
                 </Badge>
-                <span className="flex items-center gap-0.5 text-[10px] text-text-tertiary">
-                  <Clock className="h-3 w-3" />
-                  {task.timeBlockMinutes || 90}m
-                </span>
                 <span className="text-[10px] text-text-tertiary">
                   {statusLabelsMap[task.status] || task.status}
                 </span>

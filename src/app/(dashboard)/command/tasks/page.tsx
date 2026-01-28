@@ -90,9 +90,8 @@ export default function TasksPage() {
         category: data.category,
         priority: data.priority,
         energyLevel: data.energyLevel,
-        timeBlockMinutes: data.timeBlockMinutes,
         scheduledDate,
-        scheduledTime: data.scheduledTime || undefined,
+        slotIndex: data.slotIndex,
         goalId: data.goalId || undefined,
       },
       {

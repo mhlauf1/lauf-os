@@ -98,10 +98,11 @@ export default function CalendarPage() {
     return `${startDay} – ${endDay}`;
   }
 
-  // Create task flow
-  function handleAddTask(date: Date) {
+  // Create task flow (now with slotIndex)
+  function handleAddTask(date: Date, slotIndex: number) {
     setTaskFormInitial({
       scheduledDate: format(date, "yyyy-MM-dd"),
+      slotIndex,
     });
     setTaskFormOpen(true);
   }
@@ -118,9 +119,8 @@ export default function CalendarPage() {
         category: data.category,
         priority: data.priority,
         energyLevel: data.energyLevel,
-        timeBlockMinutes: data.timeBlockMinutes,
         scheduledDate,
-        scheduledTime: data.scheduledTime || undefined,
+        slotIndex: data.slotIndex,
         goalId: data.goalId || undefined,
         activityId: data.activityId || undefined,
       },
@@ -138,7 +138,7 @@ export default function CalendarPage() {
   function handleScheduleExistingTask(
     taskId: string,
     scheduledDate: string,
-    scheduledTime: string,
+    slotIndex: number,
   ) {
     const isoDate = scheduledDate
       ? new Date(scheduledDate + "T00:00:00.000Z").toISOString()
@@ -148,7 +148,7 @@ export default function CalendarPage() {
       {
         id: taskId,
         scheduledDate: isoDate,
-        scheduledTime: scheduledTime || null,
+        slotIndex,
       },
       {
         onSuccess: () => {
@@ -182,9 +182,8 @@ export default function CalendarPage() {
         category: data.category,
         priority: data.priority,
         energyLevel: data.energyLevel,
-        timeBlockMinutes: data.timeBlockMinutes,
         scheduledDate,
-        scheduledTime: data.scheduledTime || null,
+        slotIndex: data.slotIndex ?? null,
         goalId: data.goalId || null,
         activityId: data.activityId || null,
       },
@@ -242,11 +241,10 @@ export default function CalendarPage() {
         category: editingTask.category,
         priority: editingTask.priority,
         energyLevel: editingTask.energyLevel,
-        timeBlockMinutes: editingTask.timeBlockMinutes || 90,
         scheduledDate: editingTask.scheduledDate
           ? format(parseCalendarDate(editingTask.scheduledDate), "yyyy-MM-dd")
           : "",
-        scheduledTime: editingTask.scheduledTime || "",
+        slotIndex: editingTask.slotIndex !== null ? editingTask.slotIndex : undefined,
         activityId: editingTask.activityId || "",
         goalId: editingTask.goalId || "",
       }
@@ -297,8 +295,8 @@ export default function CalendarPage() {
         </Card>
       ) : (
         <Card className="overflow-hidden flex-1 flex flex-col">
-          <CardContent className="p-0 flex-1 flex flex-col">
-            <div className="grid grid-cols-7 flex-1">
+          <CardContent className="p-0 flex-1 flex flex-col overflow-auto">
+            <div className="grid grid-cols-7 flex-1 min-h-0">
               {weekDays.map((day) => {
                 const dayKey = format(day, "yyyy-MM-dd");
                 const dayTasks = tasksByDay[dayKey] || [];

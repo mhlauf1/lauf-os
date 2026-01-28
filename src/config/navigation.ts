@@ -9,7 +9,6 @@ import {
   Heart,
   DollarSign,
   Rss,
-  Share2,
   Bot,
   Network,
   Settings,
@@ -73,11 +72,6 @@ export const creativeNavItems: NavItem[] = [
     label: 'Library',
     href: '/library',
     icon: Library,
-  },
-  {
-    label: 'Tweet Drafts',
-    href: '/social',
-    icon: Share2,
   },
 ]
 
