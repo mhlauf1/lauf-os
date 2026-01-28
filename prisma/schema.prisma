@@ -99,11 +99,13 @@ enum AssetType {
 }
 
 enum LibraryItemType {
-  INSPIRATION
-  TEMPLATE
-  AI_IMAGE
-  COMPONENT
-  IDEA
+  DESIGN     // Screenshots, videos, Figma files, visual references
+  DEVELOPED  // Components, sections, pages, templates, websites - built code
+}
+
+enum LibraryItemStatus {
+  ACTIVE    // Current, visible items
+  ARCHIVED  // Hidden from main view
 }
 
 
@@ -127,6 +129,7 @@ model User {
   activities    Activity[]
   clients       Client[]
   libraryItems  LibraryItem[]
+  collections   Collection[]
   assets        Asset[]
   workouts      Workout[]
   dailyCheckIns DailyCheckIn[]
@@ -347,34 +350,73 @@ model Asset {
 }
 
 model LibraryItem {
-  id          String          @id @default(uuid())
-  userId      String          @map("user_id")
-  goalId      String?         @map("goal_id")
-  type        LibraryItemType
-  title       String
-  description String?
-  sourceUrl   String?         @map("source_url")
-  figmaUrl    String?         @map("figma_url")
-  githubUrl   String?         @map("github_url")
-  prompt      String?         // AI prompt used
-  aiTool      String?         @map("ai_tool") // midjourney, nanobanana, etc.
-  techStack   String[]        @default([]) @map("tech_stack")
-  tags        String[]        @default([])
-  isShowcased Boolean         @default(false) @map("is_showcased")
-  isForSale   Boolean         @default(false) @map("is_for_sale")
-  price       Decimal?        @db.Decimal(10, 2)
-  createdAt   DateTime        @default(now()) @map("created_at")
-  updatedAt   DateTime        @updatedAt @map("updated_at")
+  id           String            @id @default(uuid())
+  userId       String            @map("user_id")
+  goalId       String?           @map("goal_id")
+  type         LibraryItemType
+  status       LibraryItemStatus @default(ACTIVE)
+  title        String
+  description  String?
+  sourceUrl    String?           @map("source_url")
+  figmaUrl     String?           @map("figma_url")
+  githubUrl    String?           @map("github_url")
+  techStack    String[]          @default([]) @map("tech_stack")
+  tags         String[]          @default([])
+  // Code storage fields
+  code         String?           // Actual code content
+  language     String?           // tsx, css, html, etc.
+  // Image/preview field
+  thumbnailUrl String?           @map("thumbnail_url")
+  createdAt    DateTime          @default(now()) @map("created_at")
+  updatedAt    DateTime          @updatedAt @map("updated_at")
 
   // Relations
-  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  goal   Goal?   @relation(fields: [goalId], references: [id], onDelete: SetNull)
-  assets Asset[]
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  goal            Goal?            @relation(fields: [goalId], references: [id], onDelete: SetNull)
+  assets          Asset[]
+  collectionItems CollectionItem[]
 
   @@index([userId])
   @@index([goalId])
   @@index([type])
+  @@index([status])
   @@map("library_items")
+}
+
+model Collection {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  name        String
+  description String?
+  color       String?  // Hex color for UI
+  icon        String?  // Lucide icon name
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user  User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items CollectionItem[]
+
+  @@index([userId])
+  @@map("collections")
+}
+
+model CollectionItem {
+  id            String   @id @default(uuid())
+  collectionId  String   @map("collection_id")
+  libraryItemId String   @map("library_item_id")
+  sortOrder     Int      @default(0) @map("sort_order")
+  addedAt       DateTime @default(now()) @map("added_at")
+
+  // Relations
+  collection  Collection  @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  libraryItem LibraryItem @relation(fields: [libraryItemId], references: [id], onDelete: Cascade)
+
+  @@unique([collectionId, libraryItemId])
+  @@index([collectionId])
+  @@index([libraryItemId])
+  @@map("collection_items")
 }
 
 // ============================================================================

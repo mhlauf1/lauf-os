@@ -77,7 +77,7 @@ export async function PATCH(
 
     // Clean empty string URLs before validation
     const cleaned = { ...body }
-    for (const key of ['sourceUrl', 'figmaUrl', 'githubUrl']) {
+    for (const key of ['sourceUrl', 'figmaUrl', 'githubUrl', 'thumbnailUrl']) {
       if (cleaned[key] === '') cleaned[key] = null
     }
 

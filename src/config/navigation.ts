@@ -5,6 +5,7 @@ import {
   Target,
   Users,
   Folder,
+  FolderOpen,
   Library,
   Heart,
   DollarSign,
@@ -72,6 +73,11 @@ export const creativeNavItems: NavItem[] = [
     label: 'Library',
     href: '/library',
     icon: Library,
+  },
+  {
+    label: 'Collections',
+    href: '/library/collections',
+    icon: FolderOpen,
   },
 ]
 

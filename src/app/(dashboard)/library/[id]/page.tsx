@@ -2,15 +2,17 @@
 
 import { use, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 import {
   ArrowLeft,
   Trash2,
   Pencil,
   ExternalLink,
-  Star,
-  DollarSign,
   Target,
   Loader2,
+  Copy,
+  Check,
+  Code2,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import Link from 'next/link'
@@ -26,8 +28,24 @@ import {
   useDeleteLibraryItem,
   type UpdateLibraryItemData,
 } from '@/hooks/use-library'
-import { getLibraryTypeConfig } from '@/config/library'
-import type { LibraryItemType } from '@prisma/client'
+import {
+  getLibraryTypeConfig,
+  getLibraryStatusConfig,
+  getCodeLanguageConfig,
+  libraryStatusList,
+} from '@/config/library'
+import type { LibraryItemType, LibraryItemStatus, LibraryItem } from '@prisma/client'
+
+// Extended type for library item with goal relation
+interface LibraryItemWithGoal extends LibraryItem {
+  goal?: {
+    id: string
+    title: string
+    type: string
+    targetValue: number | null
+    currentValue: number
+  } | null
+}
 
 interface LibraryDetailPageProps {
   params: Promise<{ id: string }>
@@ -36,11 +54,12 @@ interface LibraryDetailPageProps {
 export default function LibraryDetailPage({ params }: LibraryDetailPageProps) {
   const { id } = use(params)
   const router = useRouter()
-  const { data: item, isLoading, error } = useLibraryItem(id)
+  const { data: item, isLoading, error } = useLibraryItem(id) as { data: LibraryItemWithGoal | undefined, isLoading: boolean, error: Error | null }
   const updateItem = useUpdateLibraryItem()
   const deleteItem = useDeleteLibraryItem()
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
+  const [copied, setCopied] = useState(false)
 
   function handleDelete() {
     deleteItem.mutate(id, {
@@ -50,6 +69,24 @@ export default function LibraryDetailPage({ params }: LibraryDetailPageProps) {
       },
       onError: (err) => toast.error(err.message || 'Failed to delete item'),
     })
+  }
+
+  function handleStatusChange(newStatus: LibraryItemStatus) {
+    updateItem.mutate(
+      { id, status: newStatus },
+      {
+        onSuccess: () => toast.success(`Status changed to ${getLibraryStatusConfig(newStatus).label}`),
+        onError: (err) => toast.error(err.message || 'Failed to update status'),
+      }
+    )
+  }
+
+  function handleCopyCode() {
+    if (!item?.code) return
+    navigator.clipboard.writeText(item.code)
+    setCopied(true)
+    toast.success('Code copied to clipboard')
+    setTimeout(() => setCopied(false), 2000)
   }
 
   if (isLoading) {
@@ -89,6 +126,8 @@ export default function LibraryDetailPage({ params }: LibraryDetailPageProps) {
   }
 
   const typeConfig = getLibraryTypeConfig(item.type as LibraryItemType)
+  const statusConfig = getLibraryStatusConfig((item.status as LibraryItemStatus) || 'ACTIVE')
+  const languageConfig = item.language ? getCodeLanguageConfig(item.language) : null
   const tags = (item.tags as string[]) || []
   const techStack = (item.techStack as string[]) || []
 
@@ -102,7 +141,7 @@ export default function LibraryDetailPage({ params }: LibraryDetailPageProps) {
           </Button>
         </Link>
         <div className="flex-1">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             <h1 className="text-2xl font-semibold">{item.title}</h1>
             <Badge
               variant="secondary"
@@ -110,11 +149,12 @@ export default function LibraryDetailPage({ params }: LibraryDetailPageProps) {
             >
               {typeConfig.label}
             </Badge>
-            {item.isShowcased && (
-              <div className="rounded-full bg-amber-500/10 p-1.5">
-                <Star className="h-3.5 w-3.5 text-amber-400" />
-              </div>
-            )}
+            <Badge
+              variant="secondary"
+              className={cn(statusConfig.bgColor, statusConfig.textColor)}
+            >
+              {statusConfig.label}
+            </Badge>
           </div>
         </div>
         <div className="flex gap-2">
@@ -134,6 +174,41 @@ export default function LibraryDetailPage({ params }: LibraryDetailPageProps) {
         </div>
       </div>
 
+      {/* Status Actions */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="text-sm text-text-secondary mr-2">Status:</span>
+        {libraryStatusList.map((s) => (
+          <button
+            key={s.id}
+            disabled={updateItem.isPending}
+            onClick={() => item.status !== s.id && handleStatusChange(s.id)}
+            className={cn(
+              'rounded-full px-4 py-1.5 text-xs font-medium transition-all border-2',
+              item.status === s.id
+                ? cn(s.bgColor, s.textColor, 'border-current cursor-default')
+                : 'bg-surface-elevated text-text-secondary border-transparent hover:text-text-primary hover:border-border cursor-pointer'
+            )}
+          >
+            {s.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Thumbnail Preview */}
+      {item.thumbnailUrl && (
+        <Card className="overflow-hidden">
+          <div className="relative h-64 w-full">
+            <Image
+              src={item.thumbnailUrl}
+              alt={item.title}
+              fill
+              className="object-contain bg-surface-elevated"
+              sizes="(max-width: 1024px) 100vw, 66vw"
+            />
+          </div>
+        </Card>
+      )}
+
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Main Content */}
         <Card className="lg:col-span-2">
@@ -149,23 +224,43 @@ export default function LibraryDetailPage({ params }: LibraryDetailPageProps) {
               </div>
             )}
 
-            {/* AI Prompt */}
-            {item.prompt && (
+            {/* Code Block */}
+            {item.code && (
               <div>
-                <p className="text-sm text-text-secondary mb-1">AI Prompt</p>
-                <div className="rounded-lg border border-border bg-surface-elevated p-3">
-                  <p className="text-sm font-mono whitespace-pre-wrap">
-                    {item.prompt}
-                  </p>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Code2 className="h-4 w-4 text-blue-400" />
+                    <p className="text-sm text-text-secondary">Code</p>
+                    {languageConfig && (
+                      <Badge variant="outline" className="text-xs">
+                        {languageConfig.label}
+                      </Badge>
+                    )}
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleCopyCode}
+                    className="gap-2"
+                  >
+                    {copied ? (
+                      <>
+                        <Check className="h-4 w-4 text-green-400" />
+                        Copied
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="h-4 w-4" />
+                        Copy
+                      </>
+                    )}
+                  </Button>
                 </div>
-              </div>
-            )}
-
-            {/* AI Tool */}
-            {item.aiTool && (
-              <div>
-                <p className="text-sm text-text-secondary mb-1">AI Tool</p>
-                <p className="text-sm font-medium">{item.aiTool}</p>
+                <div className="rounded-lg border border-border bg-[#0d1117] p-4 overflow-x-auto">
+                  <pre className="text-sm font-mono text-gray-300 whitespace-pre">
+                    {item.code}
+                  </pre>
+                </div>
               </div>
             )}
 
@@ -250,7 +345,7 @@ export default function LibraryDetailPage({ params }: LibraryDetailPageProps) {
           )}
 
           {/* Linked Goal */}
-          {(item as any).goal && (
+          {item.goal && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -260,20 +355,20 @@ export default function LibraryDetailPage({ params }: LibraryDetailPageProps) {
               </CardHeader>
               <CardContent>
                 <p className="text-sm font-medium mb-2">
-                  {(item as any).goal.title}
+                  {item.goal.title}
                 </p>
-                {(item as any).goal.targetValue && (
+                {item.goal.targetValue && (
                   <div className="space-y-1">
                     <div className="flex items-center justify-between text-xs text-text-secondary">
                       <span>
-                        {(item as any).goal.currentValue} / {(item as any).goal.targetValue}
+                        {item.goal.currentValue} / {item.goal.targetValue}
                       </span>
                       <span>
                         {Math.min(
                           100,
                           Math.round(
-                            ((item as any).goal.currentValue /
-                              Math.max(1, (item as any).goal.targetValue)) *
+                            (item.goal.currentValue /
+                              Math.max(1, item.goal.targetValue)) *
                               100
                           )
                         )}
@@ -287,8 +382,8 @@ export default function LibraryDetailPage({ params }: LibraryDetailPageProps) {
                           width: `${Math.min(
                             100,
                             Math.round(
-                              ((item as any).goal.currentValue /
-                                Math.max(1, (item as any).goal.targetValue)) *
+                              (item.goal.currentValue /
+                                Math.max(1, item.goal.targetValue)) *
                                 100
                             )
                           )}%`,
@@ -297,23 +392,6 @@ export default function LibraryDetailPage({ params }: LibraryDetailPageProps) {
                     </div>
                   </div>
                 )}
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Sale Info */}
-          {item.isForSale && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <DollarSign className="h-4 w-4 text-green-400" />
-                  For Sale
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-2xl font-bold text-green-400">
-                  {item.price != null ? `$${Number(item.price).toFixed(2)}` : 'Price TBD'}
-                </p>
               </CardContent>
             </Card>
           )}

@@ -450,19 +450,19 @@ User (1) ─────< (many) Client ─────< (many) Project
 | -------------- | -------- | ------------------------------------------------ |
 | `id`           | UUID     | Primary key                                      |
 | `user_id`      | UUID     | Owner                                            |
-| `type`         | Enum     | INSPIRATION, TEMPLATE, AI_IMAGE, COMPONENT, IDEA |
+| `type`         | Enum     | DESIGN, DEVELOPED                                |
+| `status`       | Enum     | ACTIVE, ARCHIVED                                 |
 | `title`        | String   | Title                                            |
 | `description`  | Text?    | Description                                      |
 | `source_url`   | String?  | Original source                                  |
 | `figma_url`    | String?  | Figma link                                       |
 | `github_url`   | String?  | GitHub link                                      |
-| `prompt`       | Text?    | AI prompt                                        |
-| `ai_tool`      | String?  | midjourney, nanobanana                           |
+| `code`         | Text?    | Actual code content                              |
+| `language`     | String?  | Code language (tsx, css, etc.)                   |
+| `thumbnail_url`| String?  | Preview image URL                                |
 | `tech_stack`   | String[] | Technologies                                     |
 | `tags`         | String[] | Tags                                             |
-| `is_showcased` | Boolean  | Portfolio item                                   |
-| `is_for_sale`  | Boolean  | For sale                                         |
-| `price`        | Decimal? | Price                                            |
+| `goal_id`      | UUID?    | Linked goal for progress tracking                |
 
 ### Asset
 
@@ -539,11 +539,14 @@ enum EnergyLevel {
 
 // Library Item Type
 enum LibraryItemType {
-  INSPIRATION
-  TEMPLATE
-  AI_IMAGE
-  COMPONENT
-  IDEA
+  DESIGN     // Screenshots, videos, Figma files, visual references
+  DEVELOPED  // Components, sections, pages, templates - built code
+}
+
+// Library Item Status
+enum LibraryItemStatus {
+  ACTIVE    // Current, visible items
+  ARCHIVED  // Hidden from main view
 }
 
 // Tweet Draft Status
@@ -695,37 +698,55 @@ enum TweetDraftStatus {
 
 ## 5.3 Creative Library
 
-> _"Your personal design system, template library, and inspiration vault."_
+> _"A simple pipeline for collecting and building from creative assets."_
 
 ### Core Philosophy
 
-1. **Collect inspiration**: Save what inspires you
-2. **Build reusable templates**: Every project creates reusable pieces
-3. **Track AI generations**: Organize with prompts
-4. **Showcase progress**: Visual compounding chart
+1. **Two categories**: Design (visual references) and Developed (built code)
+2. **Simple status**: Active (current) or Archived (hidden)
+3. **Store actual code**: Copy snippets with one click
+4. **Goal linking**: Track creation progress toward monthly goals
+
+### Categories
+
+| Type | Description |
+|------|-------------|
+| `DESIGN` | Screenshots, videos, Figma files, visual references |
+| `DEVELOPED` | Components, sections, pages, templates - built code |
+
+### Statuses
+
+| Status | Description |
+|--------|-------------|
+| `ACTIVE` | Current, visible items |
+| `ARCHIVED` | Hidden from main view |
 
 ### Features
 
-| Feature                | Description                         |
-| ---------------------- | ----------------------------------- |
-| **Inspiration Board**  | Save websites with screenshots      |
-| **Template Library**   | Figma designs, code templates       |
-| **AI Image Vault**     | Midjourney, NanoBanana with prompts |
-| **Component Library**  | Reusable code snippets              |
-| **Idea Backlog**       | Future project ideas                |
-| **Progress Dashboard** | Compounding chart                   |
-| **Tagging System**     | Multi-tag with filtering            |
-| **Remix Feature**      | Create variations                   |
+| Feature                | Description                              | Status  |
+| ---------------------- | ---------------------------------------- | ------- |
+| **Grid/List View**     | Toggle between card grid and table view  | Done    |
+| **Type Filter**        | Filter by Design or Developed            | Done    |
+| **Status Filter**      | Filter by Active or Archived             | Done    |
+| **Code Storage**       | Store code with language + one-click copy| Done    |
+| **Image Upload**       | Upload thumbnails to Supabase Storage    | Done    |
+| **Tagging System**     | Multi-tag with filtering                 | Done    |
+| **Tech Stack**         | Track technologies used                  | Done    |
+| **Goal Linking**       | Link items to goals for progress tracking| Done    |
+| **Collections**        | Organize items into collections          | Done    |
+| **Hover Previews**     | Large preview on card hover (grid view)  | Done    |
 
 ### UI Components
 
-- `InspirationCard` - Saved website
-- `TemplateCard` - Template preview
-- `AIImageCard` - AI image with prompt
-- `IdeaCard` - Idea in backlog
-- `LibraryGrid` - Masonry grid
-- `TagFilter` - Tag filtering
-- `ProgressChart` - Compounding viz
+- `LibraryItemCard` - Card with hover preview, type/status badges, quick copy
+- `LibraryItemForm` - Create/edit dialog with 2-button type selector
+- `LibraryGrid` - Responsive grid of cards
+- `LibraryListView` - Table view with sortable columns
+- `ImageUpload` - Drag-drop upload with URL fallback
+- `CollectionCard` - Collection display
+- `CollectionForm` - Create/edit collection
+- `AddToCollectionDialog` - Add items to collections
+- `ViewToggle` - Grid/list view switcher
 
 ---
 
