@@ -505,6 +505,99 @@ All fields are optional. Set `completedAt` to `null` to un-complete.
 
 ---
 
+## Tweet Drafts API
+
+### GET /api/tweets
+
+Get all tweet drafts for the authenticated user.
+
+**Query Parameters:**
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `status` | string | Filter by status (DRAFT, READY, POSTED, ARCHIVED) |
+| `search` | string | Search in content |
+| `tag` | string | Filter by tag |
+
+**Response:**
+```json
+{
+  "data": [
+    {
+      "id": "uuid",
+      "content": "Building in public is the best marketing strategy.",
+      "tweetNumber": 1,
+      "totalTweets": 1,
+      "status": "DRAFT",
+      "tags": ["marketing", "indie"],
+      "postedAt": null,
+      "createdAt": "2026-01-27T10:00:00.000Z"
+    }
+  ],
+  "error": null
+}
+```
+
+**Status:** Implemented
+
+---
+
+### POST /api/tweets
+
+Create a new tweet draft.
+
+**Request Body:**
+```json
+{
+  "content": "Building in public is the best marketing strategy.",
+  "status": "DRAFT",
+  "tags": ["marketing", "indie"],
+  "tweetNumber": 1,
+  "totalTweets": 1
+}
+```
+
+Content is required (1–280 characters). All other fields are optional.
+
+**Status:** Implemented
+
+---
+
+### GET /api/tweets/[id]
+
+Get a single tweet draft. Returns 404 if not found or not owned by user.
+
+**Status:** Implemented
+
+---
+
+### PATCH /api/tweets/[id]
+
+Update an existing tweet draft.
+
+**Request Body:**
+```json
+{
+  "content": "Updated content",
+  "status": "READY",
+  "tags": ["updated"],
+  "postedAt": "2026-01-27T12:00:00.000Z"
+}
+```
+
+All fields are optional.
+
+**Status:** Implemented
+
+---
+
+### DELETE /api/tweets/[id]
+
+Delete a tweet draft. Returns 404 if not found or not owned by user.
+
+**Status:** Implemented
+
+---
+
 ## Error Codes
 
 | Status | Description |
@@ -544,6 +637,11 @@ All fields are optional. Set `completedAt` to `null` to un-complete.
 | `GET /api/goals` | Implemented |
 | `POST /api/goals` | Implemented |
 | `PATCH /api/goals/[id]` | Implemented |
+| `GET /api/tweets` | Implemented |
+| `POST /api/tweets` | Implemented |
+| `GET /api/tweets/[id]` | Implemented |
+| `PATCH /api/tweets/[id]` | Implemented |
+| `DELETE /api/tweets/[id]` | Implemented |
 
 ---
 

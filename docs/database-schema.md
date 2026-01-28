@@ -34,6 +34,7 @@ LAUF OS uses Prisma 7 as the ORM with PostgreSQL (via Supabase). The schema supp
 | `DailyCheckIn` | Phase 4 | Schema ready |
 | `Transaction` | Phase 4 | Schema ready |
 | `Contact` | Phase 5 | Schema ready |
+| `TweetDraft` | Phase 5 | Complete |
 | `SocialPost` | Phase 5 | Schema ready |
 | `FeedSource` | Phase 3 | Schema ready |
 | `FeedItem` | Phase 3 | Schema ready |
@@ -107,6 +108,13 @@ enum GoalType {
   WEEKLY
   MONTHLY
   YEARLY
+}
+
+enum TweetDraftStatus {
+  DRAFT
+  READY
+  POSTED
+  ARCHIVED
 }
 ```
 
@@ -350,6 +358,35 @@ model Asset {
   updatedAt     DateTime  @updatedAt @map("updated_at")
 
   @@map("assets")
+}
+```
+
+---
+
+## Social Manager Models
+
+### TweetDraft
+
+Tweet drafts with 280-character limit, status management, tagging, and thread support.
+
+```prisma
+model TweetDraft {
+  id          String           @id @default(uuid())
+  userId      String           @map("user_id")
+  content     String           // max 280 chars (enforced by Zod)
+  tweetNumber Int              @default(1) @map("tweet_number")
+  totalTweets Int              @default(1) @map("total_tweets")
+  status      TweetDraftStatus @default(DRAFT)
+  tags        String[]         @default([])
+  postedAt    DateTime?        @map("posted_at")
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
+
+  user User @relation(...)
+
+  @@index([userId])
+  @@index([status])
+  @@map("tweet_drafts")
 }
 ```
 

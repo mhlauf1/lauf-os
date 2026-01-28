@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import { format } from 'date-fns'
 import {
   DndContext,
@@ -11,7 +11,7 @@ import {
   type DragStartEvent,
   type DragEndEvent,
 } from '@dnd-kit/core'
-import { Plus, Target, Clock, TrendingUp } from 'lucide-react'
+import { Plus, Target } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -30,11 +30,13 @@ import {
   TaskForm,
   ActivityForm,
   ActivityCardInner,
+  TaskBacklogCardInner,
+  GoalsPanelContent,
 } from '@/components/modules/command'
 import { useTasks, useCreateTask, useUpdateTask, useDeleteTask } from '@/hooks/use-tasks'
 import { useActivities, useCreateActivity, useUpdateActivity, useDeleteActivity } from '@/hooks/use-activities'
 import { useGoals, useCreateGoal, useUpdateGoal } from '@/hooks/use-goals'
-import type { Activity, GoalType } from '@prisma/client'
+import type { Activity, Task, GoalType } from '@prisma/client'
 import type { TaskFormData } from '@/components/modules/command/TaskForm'
 
 const DEFAULT_SLOTS = [
@@ -49,16 +51,11 @@ export default function DayBuilderPage() {
 
   // Data queries — fetch ALL incomplete goals, not just monthly
   const { data: tasks = [], isLoading: tasksLoading } = useTasks({ date: todayStr })
+  const { data: backlogTasks = [] } = useTasks({ scheduled: 'false' })
   const { data: activities = [], isLoading: activitiesLoading } = useActivities()
   const { data: allGoals = [], isLoading: goalsLoading } = useGoals({
     completed: 'false',
   })
-
-  // Derive monthly goals for stats card only
-  const monthlyGoals = useMemo(
-    () => allGoals.filter((g) => g.type === 'MONTHLY'),
-    [allGoals]
-  )
 
   // Mutations
   const createTask = useCreateTask()
@@ -79,34 +76,20 @@ export default function DayBuilderPage() {
   const [taskFormInitial, setTaskFormInitial] = useState<Partial<TaskFormData>>({})
   const [goalType, setGoalType] = useState<GoalType>('MONTHLY')
   const [activeActivity, setActiveActivity] = useState<Activity | null>(null)
+  const [activeTask, setActiveTask] = useState<Task | null>(null)
 
   // Drag-and-drop sensors
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
   )
 
-  // Computed stats
-  const stats = useMemo(() => {
-    const completedBlocks = tasks.filter((t) => t.status === 'DONE').length
-    const totalBlocks = tasks.length
-    const goalProgress =
-      monthlyGoals.length > 0
-        ? Math.round(
-            monthlyGoals.reduce((acc, g) => {
-              const target = g.targetValue || 1
-              return acc + Math.min(100, (g.currentValue / target) * 100)
-            }, 0) / monthlyGoals.length
-          )
-        : 0
-    const goalsCompleted = monthlyGoals.filter((g) => g.completedAt).length
-
-    return { completedBlocks, totalBlocks, goalProgress, goalsCompleted }
-  }, [tasks, monthlyGoals])
-
-  // Find next available time slot for today
-  function getNextAvailableSlot(): string {
-    const usedTimes = new Set(tasks.map((t) => t.scheduledTime))
-    return DEFAULT_SLOTS.find((slot) => !usedTimes.has(slot)) || '08:00'
+  // Find next available time slot with enough remaining capacity
+  function getNextAvailableSlot(minMinutes = 1): string {
+    return DEFAULT_SLOTS.find((slot) => {
+      const slotTasks = tasks.filter((t) => t.scheduledTime === slot)
+      const used = slotTasks.reduce((sum, t) => sum + (t.timeBlockMinutes || 90), 0)
+      return (90 - used) >= minMinutes
+    }) || '08:00'
   }
 
   // Handlers
@@ -263,47 +246,84 @@ export default function DayBuilderPage() {
     const data = event.active.data.current
     if (data?.type === 'activity') {
       setActiveActivity(data.activity as Activity)
+    } else if (data?.type === 'task') {
+      setActiveTask(data.task as Task)
     }
   }, [])
 
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
       setActiveActivity(null)
+      setActiveTask(null)
       const { active, over } = event
       if (!over) return
 
       const activeData = active.data.current
       const overData = over.data.current
-      if (activeData?.type !== 'activity' || overData?.type !== 'timeline-slot') return
+      if (overData?.type !== 'timeline-slot') return
 
-      const activity = activeData.activity as Activity
       const time = overData.time as string
-      // Use UTC midnight so @db.Date stores the correct calendar date
+      const maxMinutes = (overData.maxMinutes as number) ?? 90
       const scheduledDate = new Date(todayStr + 'T00:00:00.000Z').toISOString()
 
-      createTask.mutate(
-        {
-          title: activity.title,
-          description: activity.description || undefined,
-          category: activity.category,
-          priority: 'MEDIUM',
-          energyLevel: activity.energyLevel,
-          timeBlockMinutes: activity.defaultDuration,
-          scheduledDate,
-          scheduledTime: time,
-          activityId: activity.id,
-        },
-        {
-          onSuccess: () => toast.success(`Added "${activity.title}" at ${time}`),
-          onError: (err) => toast.error(err.message || 'Failed to create task'),
+      if (activeData?.type === 'activity') {
+        const activity = activeData.activity as Activity
+        const duration = activity.defaultDuration
+
+        if (duration > maxMinutes) {
+          toast.error(
+            `"${activity.title}" is ${duration}m but only ${maxMinutes}m available in this slot`
+          )
+          return
         }
-      )
+
+        createTask.mutate(
+          {
+            title: activity.title,
+            description: activity.description || undefined,
+            category: activity.category,
+            priority: 'MEDIUM',
+            energyLevel: activity.energyLevel,
+            timeBlockMinutes: duration,
+            scheduledDate,
+            scheduledTime: time,
+            activityId: activity.id,
+          },
+          {
+            onSuccess: () => toast.success(`Added "${activity.title}" at ${time}`),
+            onError: (err) => toast.error(err.message || 'Failed to create task'),
+          }
+        )
+      } else if (activeData?.type === 'task') {
+        const task = activeData.task as Task
+        const duration = task.timeBlockMinutes || 90
+
+        if (duration > maxMinutes) {
+          toast.error(
+            `"${task.title}" is ${duration}m but only ${maxMinutes}m available in this slot`
+          )
+          return
+        }
+
+        updateTask.mutate(
+          {
+            id: task.id,
+            scheduledDate,
+            scheduledTime: time,
+          },
+          {
+            onSuccess: () => toast.success(`Scheduled "${task.title}" at ${time}`),
+            onError: (err) => toast.error(err.message || 'Failed to schedule task'),
+          }
+        )
+      }
     },
-    [todayStr, createTask]
+    [todayStr, createTask, updateTask]
   )
 
   const handleDragCancel = useCallback(() => {
     setActiveActivity(null)
+    setActiveTask(null)
   }, [])
 
   const isLoading = tasksLoading || activitiesLoading || goalsLoading
@@ -333,51 +353,7 @@ export default function DayBuilderPage() {
         </Button>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-text-secondary">
-              Today&apos;s Blocks
-            </CardTitle>
-            <Clock className="h-4 w-4 text-text-tertiary" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {stats.completedBlocks} / {stats.totalBlocks}
-            </div>
-            <p className="text-xs text-text-tertiary">blocks completed</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-text-secondary">
-              Monthly Goals
-            </CardTitle>
-            <Target className="h-4 w-4 text-text-tertiary" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.goalProgress}%</div>
-            <p className="text-xs text-text-tertiary">
-              {stats.goalsCompleted} of {monthlyGoals.length} completed
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-text-secondary">
-              Activities
-            </CardTitle>
-            <TrendingUp className="h-4 w-4 text-text-tertiary" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{activities.length}</div>
-            <p className="text-xs text-text-tertiary">in your catalog</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Main Content: Timeline + Sidebar (Goals/Activities) */}
+      {/* Main Content: Timeline (left) + Goals / Activities (right) */}
       <DndContext
         sensors={sensors}
         onDragStart={handleDragStart}
@@ -385,7 +361,7 @@ export default function DayBuilderPage() {
         onDragCancel={handleDragCancel}
       >
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-          {/* Daily Timeline (2/3 width) */}
+          {/* Daily Timeline — full height left column */}
           <div className="lg:col-span-2">
             {isLoading ? (
               <Card>
@@ -408,27 +384,42 @@ export default function DayBuilderPage() {
             )}
           </div>
 
-          {/* Sidebar: Goals / Activities tabs (1/3 width) */}
-          <div>
+          {/* Right column: Goals (top) + Activities/Backlog (bottom) */}
+          <div className="space-y-6">
+            {/* Goals Card */}
+            <Card>
+              <CardHeader className="pb-2">
+                <div className="flex items-center gap-2">
+                  <Target className="h-4 w-4 text-text-tertiary" />
+                  <CardTitle className="text-base">Goals</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <GoalsPanelContent
+                  goals={allGoals}
+                  activeType={goalType}
+                  onTypeChange={setGoalType}
+                  onAddGoal={handleAddGoal}
+                  onToggleComplete={(id, completed) => {
+                    updateGoal.mutate(
+                      {
+                        id,
+                        completedAt: completed ? new Date().toISOString() : null,
+                      },
+                      {
+                        onSuccess: () =>
+                          toast.success(completed ? 'Goal completed' : 'Goal reopened'),
+                        onError: (err) =>
+                          toast.error(err.message || 'Failed to update goal'),
+                      }
+                    )
+                  }}
+                />
+              </CardContent>
+            </Card>
+
+            {/* Activities / Backlog Sidebar */}
             <CommandSidebar
-              goals={allGoals}
-              activeGoalType={goalType}
-              onGoalTypeChange={setGoalType}
-              onAddGoal={handleAddGoal}
-              onToggleGoalComplete={(id, completed) => {
-                updateGoal.mutate(
-                  {
-                    id,
-                    completedAt: completed ? new Date().toISOString() : null,
-                  },
-                  {
-                    onSuccess: () =>
-                      toast.success(completed ? 'Goal completed' : 'Goal reopened'),
-                    onError: (err) =>
-                      toast.error(err.message || 'Failed to update goal'),
-                  }
-                )
-              }}
               activities={activities}
               onSelectActivity={handleSelectActivity}
               onCreateActivity={() => {
@@ -437,6 +428,7 @@ export default function DayBuilderPage() {
               }}
               onEditActivity={handleEditActivity}
               onDeleteActivity={handleDeleteActivity}
+              backlogTasks={backlogTasks}
             />
           </div>
         </div>
@@ -451,6 +443,10 @@ export default function DayBuilderPage() {
                 onEdit={() => {}}
                 onDelete={() => {}}
               />
+            </div>
+          ) : activeTask ? (
+            <div className="w-56 opacity-90">
+              <TaskBacklogCardInner task={activeTask} />
             </div>
           ) : null}
         </DragOverlay>

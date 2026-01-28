@@ -111,12 +111,18 @@ LAUF OS is designed as a **Personal Operating System** with 9 core modules:
 
 **Goal**: X (Twitter) management
 
-| Feature | Description | Priority |
-|---------|-------------|----------|
-| **Post Composer** | Write and preview posts | High |
-| **Scheduling** | Schedule posts for later | High |
-| **Analytics** | Track post performance | Medium |
-| **Thread Composer** | Multi-tweet threads | Medium |
+**Status**: Tweet Drafts implemented in v0.6.0
+
+| Feature | Description | Priority | Status |
+|---------|-------------|----------|--------|
+| **Tweet Drafts** | Draft, edit, manage tweets with 280-char limit | High | Done |
+| **Draft Status Flow** | DRAFT → READY → POSTED / ARCHIVED management | High | Done |
+| **Thread Support** | tweetNumber/totalTweets for multi-tweet threads | High | Done |
+| **Tag System** | Organize and filter drafts by tags | Medium | Done |
+| **X API Publishing** | Publish tweets via X/Twitter API | High | Planned |
+| **Scheduling** | Schedule posts for optimal times | High | Planned |
+| **Analytics** | Track post performance | Medium | Planned |
+| **Post Composer** | Rich post composer with previews | Medium | Planned |
 
 ### Relationships Module
 
@@ -198,6 +204,10 @@ LAUF OS is designed as a **Personal Operating System** with 9 core modules:
 | 2026-01-27 | TaskForm two-tab mode | "From Catalog" / "Manual" tabs for quick activity picking vs manual entry |
 | 2026-01-27 | parseCalendarDate() for Prisma @db.Date | Strips UTC timezone to prevent off-by-one day in US timezones |
 | 2026-01-27 | ensureUser helper for API routes | Consistent user creation across all API routes, avoids duplication |
+| 2026-01-27 | Tweet Drafts before full Social Manager | Start with draft management (most value, no API dependency), add X API later |
+| 2026-01-27 | TweetDraft separate from SocialPost | SocialPost is for published posts with platform data; TweetDraft is for pre-publish workflow |
+| 2026-01-27 | 280-char Zod validation | Enforce Twitter character limit at schema level, with visual warnings at 260+ |
+| 2026-01-27 | Continuous calendar timeline | Proportional positioning (6 AM–11 PM) instead of discrete time slots for more accurate task visualization |
 
 ---
 
@@ -211,4 +221,4 @@ _Space to log feature requests as they come up_
 
 ---
 
-_Last updated: January 2026 (v0.5.0)_
+_Last updated: January 2026 (v0.6.0)_

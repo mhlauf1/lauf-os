@@ -1,8 +1,7 @@
 'use client'
 
-import { Target, TrendingUp, CheckCircle, Circle } from 'lucide-react'
+import { Target, CheckCircle, Circle, Plus } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import type { Goal, GoalType } from '@prisma/client'
 
@@ -36,57 +35,57 @@ export function GoalsPanelContent({
     totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0
 
   return (
-    <div className="space-y-4">
-      {/* Add Goal button */}
-      <div className="flex justify-end">
-        <Button variant="ghost" size="sm" onClick={onAddGoal}>
-          + Add
-        </Button>
-      </div>
-
-      {/* Type Tabs */}
-      <div className="flex gap-1 rounded-lg bg-surface-elevated p-1">
-        {goalTypes.map((type) => (
-          <button
-            key={type.value}
-            onClick={() => onTypeChange?.(type.value)}
-            className={cn(
-              'flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
-              activeType === type.value
-                ? 'bg-surface text-text-primary shadow-sm'
-                : 'text-text-secondary hover:text-text-primary'
-            )}
-          >
-            {type.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Progress */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-text-secondary">Progress</span>
-          <span className="font-medium">
-            {completedCount} / {totalCount}
-          </span>
+    <div className="space-y-3">
+      {/* Top row: Tabs + Add */}
+      <div className="flex items-center justify-between">
+        <div className="flex gap-1 rounded-md bg-surface-elevated p-0.5">
+          {goalTypes.map((type) => (
+            <button
+              key={type.value}
+              onClick={() => onTypeChange?.(type.value)}
+              className={cn(
+                'rounded px-2 py-1 text-xs font-medium transition-colors',
+                activeType === type.value
+                  ? 'bg-surface text-text-primary shadow-sm'
+                  : 'text-text-secondary hover:text-text-primary'
+              )}
+            >
+              {type.label}
+            </button>
+          ))}
         </div>
-        <div className="h-2 rounded-full bg-surface-elevated">
+        <button
+          onClick={onAddGoal}
+          className="flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-text-secondary hover:text-text-primary hover:bg-surface-elevated transition-colors"
+        >
+          <Plus className="h-3 w-3" />
+          Add
+        </button>
+      </div>
+
+      {/* Progress bar */}
+      <div className="flex items-center gap-2">
+        <span className="text-xs font-medium text-text-secondary whitespace-nowrap">
+          {completedCount}/{totalCount}
+        </span>
+        <div className="h-1.5 flex-1 rounded-full bg-surface-elevated">
           <div
             className="h-full rounded-full bg-accent transition-all"
             style={{ width: `${progressPercentage}%` }}
           />
         </div>
+        <span className="text-xs text-text-tertiary">{progressPercentage}%</span>
       </div>
 
-      {/* Goals List */}
-      <div className="space-y-2">
+      {/* Goals List — compact inline items */}
+      <div className="flex flex-wrap gap-2">
         {filteredGoals.length === 0 ? (
-          <p className="text-center text-sm text-text-tertiary py-4">
+          <p className="text-xs text-text-tertiary py-1">
             No {activeType.toLowerCase()} goals set
           </p>
         ) : (
           filteredGoals.map((goal) => (
-            <GoalItem
+            <CompactGoalItem
               key={goal.id}
               goal={goal}
               onClick={() => onGoalClick?.(goal.id)}
@@ -102,7 +101,7 @@ export function GoalsPanelContent({
 export function GoalsPanel(props: GoalsPanelProps) {
   return (
     <Card>
-      <CardHeader className="pb-3">
+      <CardHeader className="pb-2">
         <div className="flex items-center gap-2">
           <Target className="h-4 w-4 text-text-tertiary" />
           <CardTitle className="text-base">Goals</CardTitle>
@@ -121,7 +120,7 @@ interface GoalItemProps {
   onToggleComplete?: (id: string, completed: boolean) => void
 }
 
-function GoalItem({ goal, onClick, onToggleComplete }: GoalItemProps) {
+function CompactGoalItem({ goal, onClick, onToggleComplete }: GoalItemProps) {
   const isCompleted = !!goal.completedAt
   const hasTarget = goal.targetValue !== null
   const progress = hasTarget
@@ -136,58 +135,39 @@ function GoalItem({ goal, onClick, onToggleComplete }: GoalItemProps) {
   return (
     <div
       className={cn(
-        'w-full rounded-lg border border-border p-3 text-left transition-colors',
+        'flex items-center gap-2 rounded-md border border-border px-2.5 py-1.5 text-xs transition-colors',
         'hover:border-border/80 hover:bg-surface-elevated',
-        isCompleted && 'opacity-60'
+        isCompleted && 'opacity-50'
       )}
     >
-      <div className="flex items-start gap-3">
-        <button
-          onClick={(e) => {
-            e.stopPropagation()
-            onToggleComplete?.(goal.id, !isCompleted)
-          }}
-          className="mt-0.5 transition-colors hover:opacity-80"
-        >
-          {isCompleted ? (
-            <CheckCircle className="h-4 w-4 text-green-400" />
-          ) : (
-            <Circle className="h-4 w-4 text-text-tertiary hover:text-accent" />
-          )}
-        </button>
-        <button onClick={onClick} className="flex-1 min-w-0 text-left">
-          <p
-            className={cn(
-              'font-medium text-sm',
-              isCompleted && 'line-through text-text-tertiary'
-            )}
-          >
-            {goal.title}
-          </p>
-          {hasTarget && (
-            <div className="mt-2 space-y-1">
-              <div className="flex items-center justify-between text-xs text-text-secondary">
-                <span>
-                  {goal.currentValue} / {goal.targetValue}
-                </span>
-                <span>{progress}%</span>
-              </div>
-              <div className="h-1 rounded-full bg-surface-elevated">
-                <div
-                  className={cn(
-                    'h-full rounded-full transition-all',
-                    progress >= 100 ? 'bg-green-400' : 'bg-accent'
-                  )}
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
-            </div>
-          )}
-        </button>
-        {!isCompleted && progress > 0 && (
-          <TrendingUp className="h-4 w-4 text-green-400" />
+      <button
+        onClick={(e) => {
+          e.stopPropagation()
+          onToggleComplete?.(goal.id, !isCompleted)
+        }}
+        className="transition-colors hover:opacity-80"
+      >
+        {isCompleted ? (
+          <CheckCircle className="h-3.5 w-3.5 text-green-400" />
+        ) : (
+          <Circle className="h-3.5 w-3.5 text-text-tertiary hover:text-accent" />
         )}
-      </div>
+      </button>
+      <button onClick={onClick} className="text-left">
+        <span
+          className={cn(
+            'font-medium',
+            isCompleted && 'line-through text-text-tertiary'
+          )}
+        >
+          {goal.title}
+        </span>
+      </button>
+      {hasTarget && (
+        <span className="text-text-tertiary ml-1">
+          {goal.currentValue}/{goal.targetValue}
+        </span>
+      )}
     </div>
   )
 }

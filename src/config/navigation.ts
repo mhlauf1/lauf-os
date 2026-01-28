@@ -74,6 +74,11 @@ export const creativeNavItems: NavItem[] = [
     href: '/library',
     icon: Library,
   },
+  {
+    label: 'Tweet Drafts',
+    href: '/social',
+    icon: Share2,
+  },
 ]
 
 // Future modules - Coming soon
@@ -97,13 +102,6 @@ export const comingSoonNavItems: NavItem[] = [
     href: '/intel',
     icon: Rss,
     badge: 'Phase 3',
-    disabled: true,
-  },
-  {
-    label: 'Social',
-    href: '/social',
-    icon: Share2,
-    badge: 'Phase 5',
     disabled: true,
   },
   {

@@ -9,7 +9,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-_Next: Database migration, Intel Feed + AI Hub (Phase 3)_
+_Next: Database migration, X/Twitter API integration, Intel Feed + AI Hub (Phase 3)_
+
+---
+
+## [0.6.0] - 2026-01-27
+
+### Added
+
+**Tweet Drafts Module (Social Manager Early Start)**
+
+Full tweet draft management system — the first piece of the Social Manager module.
+
+- `TweetDraft` Prisma model with `TweetDraftStatus` enum (DRAFT, READY, POSTED, ARCHIVED)
+- Zod validation schemas (`src/lib/validations/tweet-draft.schema.ts`): 280-character limit, thread support (tweetNumber/totalTweets), tag arrays
+- API routes: `/api/tweets` (GET with status/search/tag filters, POST) + `/api/tweets/[id]` (GET, PATCH, DELETE) with ownership validation
+- React Query hooks (`use-tweet-drafts.ts`): useTweetDrafts, useTweetDraft, useCreateTweetDraft, useUpdateTweetDraft, useDeleteTweetDraft
+- Components: TweetDraftCard (status badge, content preview, char count, tags, dropdown actions), TweetDraftForm (char counter with color warnings, status toggle, TagInput), TweetGrid (responsive 1-2-3 column grid)
+- Social list page (`/social`) with stats cards (total/ready/posted), debounced search, status filter tabs, delete confirmations
+- Social detail page (`/social/[id]`) with character counter, status actions (Ready/Posted/Draft/Archive), edit dialog, delete with redirect
+- Navigation updated: "Social" section added to sidebar
+
+**Command Center UX Enhancements**
+
+- `TaskBacklog` component: draggable unscheduled task cards using `@dnd-kit/core` for Day Builder scheduling
+- Calendar page redesign: continuous timeline (6 AM–11 PM) replacing discrete time slots; tasks positioned and sized proportionally; hour grid lines
+- Various UX refinements across DailyTimeline, CommandSidebar, GoalsPanel, TaskForm, TimeBlock
+
+**New shadcn/ui Components**
+
+- `Command` (cmdk) — command palette/search interface
+- `Popover` — floating content positioned relative to trigger
+- `Select` — dropdown select with scroll buttons and keyboard navigation
+
+**Dependencies**
+
+- Added `@radix-ui/react-popover`, `@radix-ui/react-select`, `cmdk`
 
 ---
 
@@ -287,6 +322,7 @@ This release pivots LAUF OS from a content-creation tool to a full **Personal Op
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 0.6.0 | 2026-01-27 | Tweet Drafts module (Social Manager), TaskBacklog, calendar redesign, new UI components |
 | 0.5.0 | 2026-01-27 | Creative Library module + Day Builder UX Overhaul (drag-and-drop, CommandSidebar, TaskForm tabs) |
 | 0.4.0 | 2026-01-27 | Critical fixes + modular hardening (toasts, delete confirmations, cache fixes) |
 | 0.3.0 | 2026-01-26 | Client CRM wire-up + Command Center polish |
@@ -299,10 +335,15 @@ This release pivots LAUF OS from a content-creation tool to a full **Personal Op
 
 ## Upcoming Versions
 
-### 0.6.0 - Intel Feed & AI Hub
+### 0.7.0 - Intel Feed & AI Hub
 - RSS feeds
 - Article summaries
 - AI tool tracking
+
+### 0.8.0 - Social Publishing
+- X/Twitter API integration
+- Tweet scheduling
+- Analytics dashboard
 
 ### 1.0.0 - Full MVP
 - All 9 modules functional

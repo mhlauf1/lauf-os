@@ -17,7 +17,7 @@
 
 |             |                    |
 | ----------- | ------------------ |
-| **Version** | 1.3                |
+| **Version** | 1.4                |
 | **Created** | January 2025       |
 | **Updated** | January 2026       |
 | **Status**  | Active Development |
@@ -262,6 +262,7 @@ lauf-os/
 │   │       ├── clients/
 │   │       ├── projects/
 │   │       ├── tasks/
+│   │       ├── tweets/           # Tweet drafts
 │   │       ├── assets/
 │   │       ├── library/
 │   │       └── ai/
@@ -356,6 +357,7 @@ User (1) ─────< (many) Client ─────< (many) Project
   ├─────< Transaction
   ├─────< Contact
   ├─────< SocialPost
+  ├─────< TweetDraft
   ├─────< FeedSource ─────< FeedItem
   ├─────< AITool
   ├─────< Opportunity
@@ -542,6 +544,14 @@ enum LibraryItemType {
   COMPONENT
   IDEA
 }
+
+// Tweet Draft Status
+enum TweetDraftStatus {
+  DRAFT       // Work in progress
+  READY       // Ready to post
+  POSTED      // Published
+  ARCHIVED    // Shelved
+}
 ```
 
 ---
@@ -586,6 +596,8 @@ enum LibraryItemType {
 | **Drag-and-Drop**      | Drag activities from sidebar catalog onto empty timeline slots | Done   |
 | **CommandSidebar**     | Tabbed sidebar with Goals + Activities tabs                   | Done   |
 | **TaskForm Catalog Mode** | "From Catalog" / "Manual" tabs for quick activity picking  | Done   |
+| **Task Backlog**       | Draggable unscheduled tasks for scheduling onto timeline      | Done   |
+| **Calendar Redesign**  | Continuous timeline (6 AM–11 PM) with proportional positioning | Done   |
 | **Context Preloader**  | Linked assets and project info per task                       | Planned |
 | **Prep Mode**          | AI suggests tomorrow's schedule                               | Planned |
 | **Weekly Review**      | What got done, what worked, next week planning                | Planned |
@@ -601,7 +613,8 @@ enum LibraryItemType {
 - `CommandSidebar` - Tabbed sidebar (Goals / Activities tabs) for Day Builder
 - `GoalsPanel` - Goals sidebar with progress tracking + clickable completion toggle
 - `GoalFormDialog` - Create goals of any type (Daily/Weekly/Monthly/Yearly) with type picker
-- `CalendarPage` - Week view with day columns, time slots, task rendering
+- `TaskBacklog` - Draggable unscheduled task cards for Day Builder (`useDraggable`)
+- `CalendarPage` - Continuous timeline week view (6 AM–11 PM) with proportional task positioning
 - `ConfirmDeleteDialog` - Reusable delete confirmation (AlertDialog wrapper)
 - `PrepMode` - AI suggestions (planned)
 
@@ -788,20 +801,29 @@ enum LibraryItemType {
 
 ### Features
 
-| Feature               | Description                      |
-| --------------------- | -------------------------------- |
-| **Content Queue**     | Draft posts, library integration |
-| **Scheduling**        | Calendar view, optimal times     |
-| **Publishing**        | X/Twitter API integration        |
-| **Analytics**         | Engagement, growth tracking      |
-| **Favorite Accounts** | Track accounts for inspiration   |
+| Feature               | Description                                                | Status  |
+| --------------------- | ---------------------------------------------------------- | ------- |
+| **Tweet Drafts**      | Draft, edit, and manage tweets with 280-char enforcement   | Done    |
+| **Draft Status Flow** | DRAFT → READY → POSTED / ARCHIVED status management       | Done    |
+| **Thread Support**    | tweetNumber/totalTweets for multi-tweet threads            | Done    |
+| **Tag System**        | Organize drafts with tags, filter by tag                   | Done    |
+| **Stats Dashboard**   | Total drafts, ready count, posted count                    | Done    |
+| **Detail View**       | Full draft view with character count, status actions       | Done    |
+| **Content Queue**     | Draft posts, library integration                           | Planned |
+| **Scheduling**        | Calendar view, optimal times                               | Planned |
+| **Publishing**        | X/Twitter API integration                                  | Planned |
+| **Analytics**         | Engagement, growth tracking                                | Planned |
+| **Favorite Accounts** | Track accounts for inspiration                             | Planned |
 
 ### UI Components
 
-- `PostComposer` - Create post
-- `QueueList` - Scheduled posts
-- `AnalyticsChart` - Engagement viz
-- `AccountCard` - Tracked account
+- `TweetDraftCard` - Draft card with status badge, content preview, character count, tags, dropdown actions
+- `TweetDraftForm` - Create/edit dialog with character counter (280 limit), status toggle (Draft/Ready), TagInput
+- `TweetGrid` - Responsive 1-2-3 column grid for draft cards
+- `PostComposer` - Full post composer (planned)
+- `QueueList` - Scheduled posts (planned)
+- `AnalyticsChart` - Engagement viz (planned)
+- `AccountCard` - Tracked account (planned)
 
 ---
 
@@ -1046,10 +1068,26 @@ enum LibraryItemType {
 - [ ] Finances: Income dashboard
 - [ ] Finances: Expense tracking
 
+## 7.5.1 Tweet Drafts Module (Social Manager Early Start) (Complete)
+
+- [x] `TweetDraft` Prisma model + `TweetDraftStatus` enum
+- [x] Zod validation schemas with 280 char limit + thread support
+- [x] API routes: `/api/tweets` (GET, POST) + `/api/tweets/[id]` (GET, PATCH, DELETE)
+- [x] React Query hooks (`use-tweet-drafts.ts`): query + CRUD mutations
+- [x] Components: TweetDraftCard, TweetDraftForm, TweetGrid
+- [x] Social list page with stats, search, status filters
+- [x] Social detail page with status actions, edit/delete
+- [x] Navigation updated with Social section
+- [x] TaskBacklog component (draggable unscheduled tasks)
+- [x] Calendar page redesign (continuous 6 AM–11 PM timeline)
+- [x] New shadcn/ui components: Command, Popover, Select
+
 ## 7.6 Phase 5: Growth & Automation
 
-- [ ] Social: Post composer
-- [ ] Social: X API integration
+- [x] Social: Tweet draft management (CRUD, status flow, tags, character counting)
+- [ ] Social: X API integration for publishing
+- [ ] Social: Tweet scheduling with calendar view
+- [ ] Social: Analytics dashboard
 - [ ] Relationships: Contact management
 - [ ] Advanced AI integrations
 - [ ] Zapier workflows
@@ -1278,6 +1316,7 @@ See `/prisma/schema.prisma` for full schema with all models:
 - Task
 - Goal
 - LibraryItem
+- TweetDraft
 - Workout
 - DailyCheckIn
 - Transaction
@@ -1306,6 +1345,8 @@ See `/prisma/schema.prisma` for full schema with all models:
 | GET/PATCH/DELETE     | `/api/projects/[id]`   | Get (with client, tasks, assets) / Update / Delete                 |
 | GET/POST            | `/api/library`         | List (filter: type, search) / Create                               |
 | GET/PATCH/DELETE     | `/api/library/[id]`    | Get / Update / Delete library item                                 |
+| GET/POST            | `/api/tweets`          | List (filter: status, search, tag) / Create tweet draft            |
+| GET/PATCH/DELETE     | `/api/tweets/[id]`     | Get / Update / Delete tweet draft                                  |
 
 ### Planned
 
@@ -1333,7 +1374,8 @@ See `/prisma/schema.prisma` for full schema with all models:
 - DailyTimeline (with droppable EmptySlot), TimeBlock, TaskCard, TaskForm (with catalog picker)
 - ActivityCatalog (with draggable cards), ActivityForm, CommandSidebar
 - GoalsPanel (with GoalsPanelContent), GoalFormDialog
-- WeekGrid, PrepMode (planned)
+- TaskBacklog (draggable unscheduled tasks)
+- CalendarPage (continuous timeline), PrepMode (planned)
 
 ### Clients
 
@@ -1361,7 +1403,8 @@ See `/prisma/schema.prisma` for full schema with all models:
 
 ### Social
 
-- PostComposer, QueueList, AnalyticsChart
+- TweetDraftCard, TweetDraftForm, TweetGrid
+- PostComposer, QueueList, AnalyticsChart (planned)
 
 ### Relationships
 
@@ -1373,9 +1416,9 @@ See `/prisma/schema.prisma` for full schema with all models:
 
 ---
 
-**Version:** 1.3
+**Version:** 1.4
 **Last Updated:** January 2026
-**Status:** Phase 1 Complete, Phase 1.5 Hardening Complete, Phase 2 Creative Library + Day Builder UX Overhaul Complete
+**Status:** Phase 1 Complete, Phase 1.5 Hardening Complete, Phase 2 Creative Library + Day Builder UX Overhaul Complete, Tweet Drafts Module Complete
 
 ---
 

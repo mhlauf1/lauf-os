@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Clock } from 'lucide-react'
+import { Check, ChevronsUpDown, Clock, Plus } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -14,13 +14,33 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command'
 import { categoryList, getCategoryConfig } from '@/config/categories'
-import type { TaskCategory, Priority, EnergyLevel, Activity, Goal } from '@prisma/client'
+import type { Priority, EnergyLevel, Activity, Goal } from '@prisma/client'
 
 export interface TaskFormData {
   title: string
   description: string
-  category: TaskCategory
+  category: string
   priority: Priority
   energyLevel: EnergyLevel
   timeBlockMinutes: number
@@ -43,20 +63,12 @@ interface TaskFormProps {
 
 type FormTab = 'catalog' | 'manual'
 
-const priorities: { value: Priority; label: string }[] = [
-  { value: 'LOW', label: 'Low' },
-  { value: 'MEDIUM', label: 'Medium' },
-  { value: 'HIGH', label: 'High' },
-  { value: 'URGENT', label: 'Urgent' },
-]
-
-const energyLevels: { value: EnergyLevel; label: string }[] = [
-  { value: 'DEEP_WORK', label: 'Deep Work' },
-  { value: 'MODERATE', label: 'Moderate' },
-  { value: 'LIGHT', label: 'Light' },
-]
-
 const timeOptions = [30, 45, 60, 90, 120, 180]
+
+const PRESET_COLORS = [
+  '#3b82f6', '#8b5cf6', '#22c55e', '#f97316', '#ef4444',
+  '#6b7280', '#06b6d4', '#ec4899', '#a78bfa', '#fbbf24',
+]
 
 function getDefaultFormData(
   initialData?: Partial<TaskFormData>,
@@ -221,96 +233,37 @@ export function TaskForm({
               </div>
             )}
 
-            {/* Category */}
-            <div className="space-y-2">
-              <Label>Category</Label>
-              <div className="grid grid-cols-4 gap-2">
-                {categoryList.map((cat) => (
-                  <button
-                    key={cat.id}
-                    type="button"
-                    onClick={() =>
-                      setFormData((prev) => ({ ...prev, category: cat.id }))
-                    }
-                    className={`rounded-lg border p-2 text-xs font-medium transition-colors ${
-                      formData.category === cat.id
-                        ? 'border-text-primary/30 bg-white/10 text-text-primary'
-                        : 'border-border text-text-secondary hover:border-border/80'
-                    }`}
-                  >
-                    {cat.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Priority & Energy */}
+            {/* Category + Time Block — 2-column row */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Priority</Label>
-                <div className="flex gap-1">
-                  {priorities.map((p) => (
-                    <button
-                      key={p.value}
-                      type="button"
-                      onClick={() =>
-                        setFormData((prev) => ({ ...prev, priority: p.value }))
-                      }
-                      className={`flex-1 rounded-lg border px-2 py-1.5 text-xs font-medium transition-colors ${
-                        formData.priority === p.value
-                          ? 'border-text-primary/30 bg-white/10 text-text-primary'
-                          : 'border-border text-text-secondary hover:border-border/80'
-                      }`}
-                    >
-                      {p.label}
-                    </button>
-                  ))}
-                </div>
+                <Label>Category</Label>
+                <CategoryCombobox
+                  value={formData.category}
+                  onChange={(value) =>
+                    setFormData((prev) => ({ ...prev, category: value }))
+                  }
+                />
               </div>
 
               <div className="space-y-2">
-                <Label>Energy Level</Label>
-                <div className="flex gap-1">
-                  {energyLevels.map((e) => (
-                    <button
-                      key={e.value}
-                      type="button"
-                      onClick={() =>
-                        setFormData((prev) => ({ ...prev, energyLevel: e.value }))
-                      }
-                      className={`flex-1 rounded-lg border px-2 py-1.5 text-xs font-medium transition-colors ${
-                        formData.energyLevel === e.value
-                          ? 'border-text-primary/30 bg-white/10 text-text-primary'
-                          : 'border-border text-text-secondary hover:border-border/80'
-                      }`}
-                    >
-                      {e.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Time Block */}
-            <div className="space-y-2">
-              <Label>Time Block (minutes)</Label>
-              <div className="flex gap-2">
-                {timeOptions.map((mins) => (
-                  <button
-                    key={mins}
-                    type="button"
-                    onClick={() =>
-                      setFormData((prev) => ({ ...prev, timeBlockMinutes: mins }))
-                    }
-                    className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
-                      formData.timeBlockMinutes === mins
-                        ? 'border-text-primary/30 bg-white/10 text-text-primary'
-                        : 'border-border text-text-secondary hover:border-border/80'
-                    }`}
-                  >
-                    {mins}m
-                  </button>
-                ))}
+                <Label>Time Block</Label>
+                <Select
+                  value={String(formData.timeBlockMinutes)}
+                  onValueChange={(value) =>
+                    setFormData((prev) => ({ ...prev, timeBlockMinutes: Number(value) }))
+                  }
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {timeOptions.map((mins) => (
+                      <SelectItem key={mins} value={String(mins)}>
+                        {mins}m
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
@@ -390,6 +343,173 @@ export function TaskForm({
         )}
       </DialogContent>
     </Dialog>
+  )
+}
+
+// Searchable category combobox with "+" add button
+interface CustomCategory {
+  id: string
+  label: string
+  color: string
+}
+
+function CategoryCombobox({
+  value,
+  onChange,
+}: {
+  value: string
+  onChange: (value: string) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const [addOpen, setAddOpen] = useState(false)
+  const [customCategories, setCustomCategories] = useState<CustomCategory[]>([])
+  const [newName, setNewName] = useState('')
+  const [newColor, setNewColor] = useState('#3b82f6')
+
+  // Resolve display info from built-in or custom categories
+  const builtIn = categoryList.find((c) => c.id === value)
+  const custom = customCategories.find((c) => c.id === value)
+  const selectedLabel = builtIn?.label ?? custom?.label ?? value
+  const selectedColor = builtIn?.color ?? custom?.color ?? '#6b7280'
+
+  function handleAddCategory() {
+    const name = newName.trim()
+    if (!name) return
+    const id = name.toUpperCase().replace(/\s+/g, '_')
+    setCustomCategories((prev) => [...prev, { id, label: name, color: newColor }])
+    onChange(id)
+    setNewName('')
+    setNewColor('#3b82f6')
+    setAddOpen(false)
+  }
+
+  return (
+    <div className="flex gap-2">
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            role="combobox"
+            aria-expanded={open}
+            className="w-full justify-between"
+          >
+            <span className="flex items-center gap-2">
+              <span
+                className="inline-block h-2.5 w-2.5 rounded-full shrink-0"
+                style={{ backgroundColor: selectedColor }}
+              />
+              {selectedLabel}
+            </span>
+            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+          <Command>
+            <CommandInput placeholder="Search category..." />
+            <CommandList>
+              <CommandEmpty>No category found.</CommandEmpty>
+              <CommandGroup>
+                {categoryList.map((cat) => (
+                  <CommandItem
+                    key={cat.id}
+                    value={cat.label}
+                    onSelect={() => {
+                      onChange(cat.id)
+                      setOpen(false)
+                    }}
+                  >
+                    <span
+                      className="inline-block h-2.5 w-2.5 rounded-full shrink-0"
+                      style={{ backgroundColor: cat.color }}
+                    />
+                    {cat.label}
+                    <Check
+                      className={cn(
+                        'ml-auto h-4 w-4',
+                        value === cat.id ? 'opacity-100' : 'opacity-0'
+                      )}
+                    />
+                  </CommandItem>
+                ))}
+                {customCategories.map((cat) => (
+                  <CommandItem
+                    key={cat.id}
+                    value={cat.label}
+                    onSelect={() => {
+                      onChange(cat.id)
+                      setOpen(false)
+                    }}
+                  >
+                    <span
+                      className="inline-block h-2.5 w-2.5 rounded-full shrink-0"
+                      style={{ backgroundColor: cat.color }}
+                    />
+                    {cat.label}
+                    <Check
+                      className={cn(
+                        'ml-auto h-4 w-4',
+                        value === cat.id ? 'opacity-100' : 'opacity-0'
+                      )}
+                    />
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+
+      {/* Add new category */}
+      <Popover open={addOpen} onOpenChange={setAddOpen}>
+        <PopoverTrigger asChild>
+          <Button variant="outline" size="icon" className="shrink-0" type="button">
+            <Plus className="h-4 w-4" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent align="end" className="w-64 space-y-3">
+          <p className="text-sm font-medium">New Category</p>
+          <Input
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            placeholder="Category name"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault()
+                handleAddCategory()
+              }
+            }}
+          />
+          <div className="space-y-1.5">
+            <Label className="text-xs text-text-secondary">Color</Label>
+            <div className="flex flex-wrap gap-1.5">
+              {PRESET_COLORS.map((color) => (
+                <button
+                  key={color}
+                  type="button"
+                  onClick={() => setNewColor(color)}
+                  className={cn(
+                    'h-6 w-6 rounded-full border-2 transition-transform',
+                    newColor === color
+                      ? 'border-white scale-110'
+                      : 'border-transparent hover:scale-110'
+                  )}
+                  style={{ backgroundColor: color }}
+                />
+              ))}
+            </div>
+          </div>
+          <Button
+            type="button"
+            size="sm"
+            className="w-full"
+            onClick={handleAddCategory}
+            disabled={!newName.trim()}
+          >
+            Add Category
+          </Button>
+        </PopoverContent>
+      </Popover>
+    </div>
   )
 }
 
