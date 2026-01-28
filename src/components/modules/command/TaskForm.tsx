@@ -365,7 +365,7 @@ export function TaskForm({
               </div>
             </div>
 
-            {/* Goal Link */}
+            {/* Goal Link — grouped by type */}
             {goals.length > 0 && (
               <div className="space-y-2">
                 <Label htmlFor="goalId">Link to Goal (optional)</Label>
@@ -381,14 +381,22 @@ export function TaskForm({
                   className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
                 >
                   <option value="">No goal</option>
-                  {goals.map((goal) => (
-                    <option key={goal.id} value={goal.id}>
-                      {goal.title}
-                      {goal.targetValue
-                        ? ` (${goal.currentValue}/${goal.targetValue})`
-                        : ''}
-                    </option>
-                  ))}
+                  {(['MONTHLY', 'WEEKLY', 'DAILY', 'YEARLY'] as const).map((type) => {
+                    const typeGoals = goals.filter((g) => g.type === type)
+                    if (typeGoals.length === 0) return null
+                    return (
+                      <optgroup key={type} label={type.charAt(0) + type.slice(1).toLowerCase()}>
+                        {typeGoals.map((goal) => (
+                          <option key={goal.id} value={goal.id}>
+                            {goal.title}
+                            {goal.targetValue
+                              ? ` (${goal.currentValue}/${goal.targetValue})`
+                              : ''}
+                          </option>
+                        ))}
+                      </optgroup>
+                    )
+                  })}
                 </select>
               </div>
             )}

@@ -9,6 +9,7 @@ import {
   ExternalLink,
   Star,
   DollarSign,
+  Target,
   Loader2,
 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -243,6 +244,58 @@ export default function LibraryDetailPage({ params }: LibraryDetailPageProps) {
                     <ExternalLink className="h-4 w-4" />
                     GitHub
                   </a>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Linked Goal */}
+          {(item as any).goal && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Target className="h-4 w-4 text-violet-400" />
+                  Linked Goal
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm font-medium mb-2">
+                  {(item as any).goal.title}
+                </p>
+                {(item as any).goal.targetValue && (
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between text-xs text-text-secondary">
+                      <span>
+                        {(item as any).goal.currentValue} / {(item as any).goal.targetValue}
+                      </span>
+                      <span>
+                        {Math.min(
+                          100,
+                          Math.round(
+                            ((item as any).goal.currentValue /
+                              Math.max(1, (item as any).goal.targetValue)) *
+                              100
+                          )
+                        )}
+                        %
+                      </span>
+                    </div>
+                    <div className="h-1.5 rounded-full bg-surface-elevated">
+                      <div
+                        className="h-full rounded-full bg-accent transition-all"
+                        style={{
+                          width: `${Math.min(
+                            100,
+                            Math.round(
+                              ((item as any).goal.currentValue /
+                                Math.max(1, (item as any).goal.targetValue)) *
+                                100
+                            )
+                          )}%`,
+                        }}
+                      />
+                    </div>
+                  </div>
                 )}
               </CardContent>
             </Card>

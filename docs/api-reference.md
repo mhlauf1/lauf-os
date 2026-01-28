@@ -107,7 +107,13 @@ Create a new task.
 Update an existing task. When status changes to `DONE`:
 - Sets `completedAt` timestamp
 - Auto-increments linked goal's `currentValue` (if `goalId` is set)
+- Auto-completes goal if `currentValue` reaches `targetValue`
 - Updates linked activity's `timesUsed` and `lastUsed` (if `activityId` is set)
+
+When status reverts from `DONE` to another status:
+- Clears `completedAt`
+- Decrements linked goal's `currentValue` (reopens goal if it was auto-completed)
+- Decrements linked activity's `timesUsed`
 
 **Request Body:**
 ```json
@@ -131,7 +137,7 @@ All fields are optional.
 
 ### DELETE /api/tasks/[id]
 
-Delete a task.
+Delete a task. If the task was `DONE` and linked to a goal, decrements the goal's `currentValue` (and reopens if auto-completed).
 
 **Status:** Implemented
 
@@ -430,6 +436,7 @@ Get all goals for the authenticated user.
 |-----------|------|-------------|
 | `type` | string | Filter by type (DAILY, WEEKLY, MONTHLY, YEARLY) |
 | `completed` | boolean | Filter by completion status |
+| `includeBreakdown` | boolean | Include pace breakdown data (expectedPerWeek, expectedPerDay, expectedByNow, isOnTrack, progressPercent) |
 
 **Response:**
 ```json
@@ -441,12 +448,24 @@ Get all goals for the authenticated user.
       "type": "DAILY",
       "targetValue": 4,
       "currentValue": 2,
-      "completedAt": null
+      "startDate": "2026-01-28T00:00:00.000Z",
+      "dueDate": "2026-01-28T00:00:00.000Z",
+      "completedAt": null,
+      "_count": { "tasks": 3, "libraryItems": 0 },
+      "breakdown": {
+        "expectedPerWeek": null,
+        "expectedPerDay": 4,
+        "expectedByNow": 2,
+        "isOnTrack": true,
+        "progressPercent": 50
+      }
     }
   ],
   "error": null
 }
 ```
+
+The `_count` and `breakdown` fields are always included. `breakdown` is only present when `includeBreakdown=true`.
 
 **Status:** Implemented
 
@@ -462,7 +481,8 @@ Create a new goal.
   "title": "Complete 4 deep work blocks",
   "type": "DAILY",
   "targetValue": 4,
-  "dueDate": "2026-01-26"
+  "startDate": "2026-01-28T00:00:00.000Z",
+  "dueDate": "2026-01-28T00:00:00.000Z"
 }
 ```
 
@@ -472,7 +492,7 @@ Create a new goal.
 
 ### PATCH /api/goals/[id]
 
-Update an existing goal. Supports direct progress updates and completion toggling.
+Update an existing goal. Supports direct progress updates, atomic increments, and completion toggling.
 
 **Request Body:**
 ```json
@@ -480,11 +500,24 @@ Update an existing goal. Supports direct progress updates and completion togglin
   "title": "Updated goal",
   "currentValue": 15,
   "targetValue": 30,
-  "completedAt": "2026-01-26T00:00:00.000Z"
+  "startDate": "2026-01-01T00:00:00.000Z",
+  "dueDate": "2026-01-31T00:00:00.000Z",
+  "completedAt": "2026-01-26T00:00:00.000Z",
+  "incrementValue": 1
 }
 ```
 
 All fields are optional. Set `completedAt` to `null` to un-complete.
+
+`incrementValue` performs an atomic increment/decrement on `currentValue`. If the result reaches `targetValue`, the goal is auto-completed. If decremented below `targetValue`, the goal is reopened.
+
+**Status:** Implemented
+
+---
+
+### DELETE /api/goals/[id]
+
+Delete a goal.
 
 **Status:** Implemented
 
@@ -619,9 +652,10 @@ Delete a tweet draft. Returns 404 if not found or not owned by user.
 | `GET /api/projects/[id]` | Implemented |
 | `PATCH /api/projects/[id]` | Implemented |
 | `DELETE /api/projects/[id]` | Implemented |
-| `GET /api/goals` | Implemented |
-| `POST /api/goals` | Implemented |
-| `PATCH /api/goals/[id]` | Implemented |
+| `GET /api/goals` | Implemented (supports includeBreakdown) |
+| `POST /api/goals` | Implemented (supports startDate) |
+| `PATCH /api/goals/[id]` | Implemented (supports incrementValue, auto-complete) |
+| `DELETE /api/goals/[id]` | Implemented |
 | `GET /api/tweets` | Implemented |
 | `POST /api/tweets` | Implemented |
 | `GET /api/tweets/[id]` | Implemented |
@@ -630,4 +664,4 @@ Delete a tweet draft. Returns 404 if not found or not owned by user.
 
 ---
 
-_Last updated: 2026-01-27_
+_Last updated: 2026-01-28_

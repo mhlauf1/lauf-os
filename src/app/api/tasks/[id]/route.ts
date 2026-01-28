@@ -74,8 +74,18 @@ export async function PATCH(
     const isCompletingTask =
       validatedData.status === 'DONE' && existing.status !== 'DONE'
 
+    // Handle revert: was DONE, now moving to non-DONE status
+    const isRevertingTask =
+      existing.status === 'DONE' &&
+      validatedData.status !== undefined &&
+      validatedData.status !== 'DONE'
+
     if (isCompletingTask) {
       updateData.completedAt = new Date()
+    }
+
+    if (isRevertingTask) {
+      updateData.completedAt = null
     }
 
     const task = await prisma.task.update({
@@ -96,6 +106,14 @@ export async function PATCH(
           prisma.goal.update({
             where: { id: goalId },
             data: { currentValue: { increment: 1 } },
+          }).then(async (goal) => {
+            // Auto-complete goal if target reached
+            if (goal.targetValue && goal.currentValue >= goal.targetValue && !goal.completedAt) {
+              await prisma.goal.update({
+                where: { id: goalId },
+                data: { completedAt: new Date() },
+              })
+            }
           })
         )
       }
@@ -109,6 +127,51 @@ export async function PATCH(
               timesUsed: { increment: 1 },
               lastUsed: new Date(),
             },
+          })
+        )
+      }
+
+      if (sideEffects.length > 0) {
+        await Promise.all(sideEffects)
+      }
+    }
+
+    // Side effects on revert
+    if (isRevertingTask) {
+      const goalId = existing.goalId
+      const activityId = existing.activityId
+
+      const sideEffects: Promise<unknown>[] = []
+
+      // Decrement linked goal's currentValue
+      if (goalId) {
+        sideEffects.push(
+          prisma.goal.findUnique({ where: { id: goalId } }).then(async (goal) => {
+            if (!goal) return
+            const newValue = Math.max(0, goal.currentValue - 1)
+            await prisma.goal.update({
+              where: { id: goalId },
+              data: {
+                currentValue: newValue,
+                // Reopen goal if it was auto-completed
+                ...(goal.completedAt ? { completedAt: null } : {}),
+              },
+            })
+          })
+        )
+      }
+
+      // Decrement activity usage
+      if (activityId) {
+        sideEffects.push(
+          prisma.activity.findUnique({ where: { id: activityId } }).then(async (activity) => {
+            if (!activity) return
+            await prisma.activity.update({
+              where: { id: activityId },
+              data: {
+                timesUsed: Math.max(0, activity.timesUsed - 1),
+              },
+            })
           })
         )
       }
@@ -156,6 +219,21 @@ export async function DELETE(
 
     if (!existing) {
       return NextResponse.json({ error: 'Task not found' }, { status: 404 })
+    }
+
+    // If the deleted task was DONE and linked to a goal, decrement goal progress
+    if (existing.status === 'DONE' && existing.goalId) {
+      const goal = await prisma.goal.findUnique({ where: { id: existing.goalId } })
+      if (goal) {
+        const newValue = Math.max(0, goal.currentValue - 1)
+        await prisma.goal.update({
+          where: { id: existing.goalId },
+          data: {
+            currentValue: newValue,
+            ...(goal.completedAt ? { completedAt: null } : {}),
+          },
+        })
+      }
     }
 
     await prisma.task.delete({ where: { id } })

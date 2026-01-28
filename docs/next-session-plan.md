@@ -1,28 +1,32 @@
 # Next Session Plan
 
-> **Previous Session:** Tweet Drafts Module + Command Center UX Enhancements (2026-01-27) — Complete
+> **Previous Session:** Goal Progress & Cascades (2026-01-28) — Complete
 >
-> Branch: `feat/twitter-drafts-module`
+> Branch: `feat/goal-progress-and-cascades`
 
 ---
 
 ## What Was Completed
 
-### Tweet Drafts Module (v0.6.0)
-- `TweetDraft` Prisma model with `TweetDraftStatus` enum (DRAFT, READY, POSTED, ARCHIVED)
-- Zod validation schemas with 280-char limit + thread support (tweetNumber/totalTweets)
-- API routes: `/api/tweets` (GET with status/search/tag filters, POST) + `/api/tweets/[id]` (GET, PATCH, DELETE)
-- React Query hooks: useTweetDrafts, useTweetDraft, useCreateTweetDraft, useUpdateTweetDraft, useDeleteTweetDraft
-- Components: TweetDraftCard (status badge, char count, tags), TweetDraftForm (char counter, status toggle, TagInput), TweetGrid
-- Social list page (`/social`) with stats cards, debounced search, status filter tabs
-- Social detail page (`/social/[id]`) with status actions, edit dialog, delete
-- Navigation updated with Social section
-
-### Command Center UX Enhancements (v0.6.0)
-- `TaskBacklog` component: draggable unscheduled task cards for Day Builder
-- Calendar page redesign: continuous timeline (6 AM–11 PM) with proportional task positioning
-- New shadcn/ui components: Command (cmdk), Popover, Select
-- Various UX refinements across DailyTimeline, CommandSidebar, GoalsPanel, TaskForm, TimeBlock
+### Goal Progress & Cascades (v0.8.0)
+- Goal model: added `startDate` for pace tracking, `libraryItems` relation
+- LibraryItem model: added `goalId` for library-goal linking
+- Goal cascades utility (`goal-cascades.ts`): `computeBreakdown()` with expectedPerWeek/Day/ByNow, isOnTrack
+- Zod validation schemas extracted to `goal.schema.ts`
+- `DELETE /api/goals/[id]` endpoint
+- `PATCH /api/goals/[id]` supports atomic `incrementValue`, auto-complete/reopen
+- `GET /api/goals` supports `includeBreakdown` query param
+- Task revert (DONE → non-DONE) decrements linked goal + activity
+- Task delete (when DONE) decrements linked goal
+- Task completion auto-completes goal when target reached
+- Library items linked to goals auto-increment/decrement on create/update/delete
+- New components: GoalCard, GoalProgressBar, GoalFormDialog (startDate/dueDate)
+- GoalsPanel overhaul: unified view, sorted by behind-pace first
+- Goals page: perspective views (Month/Week/Day), increment/decrement buttons, delete
+- Dashboard: compact goals overview with progress bars, "View All" link
+- TaskForm + LibraryItemForm: goal dropdown grouped by type (optgroup)
+- React Query hooks: `useIncrementGoal`, `useDeleteGoal`, `GoalWithCounts` type
+- Library mutations invalidate goals cache
 
 ---
 
@@ -30,7 +34,7 @@
 
 ### 1. Database Migration
 - Still waiting for production Supabase credentials
-- Once available: `npm run prisma:migrate` to sync schema (includes TweetDraft model)
+- Once available: `npm run prisma:migrate` to sync schema (includes Goal startDate, LibraryItem goalId, TweetDraft model)
 
 ### 2. Social Manager — Publishing
 - X/Twitter API integration for publishing drafts
@@ -42,6 +46,7 @@
 - Add inline edit flows for clients and projects
 - Drag tasks to different days on calendar view
 - Add Zod schemas for all remaining forms (client-side validation)
+- Goal editing (currently only create + delete, no edit dialog)
 
 ### 4. Phase 3: Intel Feed + AI Hub
 - RSS feed aggregation
@@ -57,4 +62,4 @@
 
 ---
 
-_Last updated: 2026-01-27_
+_Last updated: 2026-01-28_

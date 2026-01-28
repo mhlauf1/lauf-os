@@ -436,6 +436,7 @@ User (1) ─────< (many) Client ─────< (many) Project
 | `category`           | Enum      | DESIGN, CODE, CLIENT, LEARNING, FITNESS, ADMIN, SAAS, NETWORKING |
 | `priority`           | Enum      | LOW, MEDIUM, HIGH, URGENT                                        |
 | `status`             | Enum      | TODO, IN_PROGRESS, BLOCKED, DONE                                 |
+| `goal_id`            | UUID?     | Optional goal (auto-increments on completion, decrements on revert) |
 | `scheduled_date`     | Date?     | When scheduled                                                   |
 | `scheduled_time`     | String?   | Time slot                                                        |
 | `time_block_minutes` | Int       | Duration (default 90)                                            |
@@ -612,7 +613,9 @@ enum TweetDraftStatus {
 - ~~`ActivityForm`~~ - Removed (activities are now fixed presets, not user-editable)
 - `CommandSidebar` - Tabbed sidebar (Goals / Activities tabs) for Day Builder
 - `GoalsPanel` - Goals sidebar with progress tracking + clickable completion toggle
-- `GoalFormDialog` - Create goals of any type (Daily/Weekly/Monthly/Yearly) with type picker
+- `GoalCard` - Goal card with progress bar, increment/decrement buttons, edit/delete menu, on-track indicator, breakdown chips
+- `GoalProgressBar` - Visual progress bar with expected-by-now marker, color-coded (green/amber/red)
+- `GoalFormDialog` - Create goals of any type (Daily/Weekly/Monthly/Yearly) with type picker, startDate/dueDate fields
 - `TaskBacklog` - Draggable unscheduled task cards for Day Builder (`useDraggable`)
 - `CalendarPage` - Continuous timeline week view (6 AM–11 PM) with proportional task positioning
 - `ConfirmDeleteDialog` - Reusable delete confirmation (AlertDialog wrapper)
@@ -1337,8 +1340,8 @@ See `/prisma/schema.prisma` for full schema with all models:
 | PATCH/DELETE         | `/api/tasks/[id]`      | Update/Delete task (auto-increments goal + activity on completion)  |
 | GET/POST            | `/api/activities`      | List/Create activities                                             |
 | PATCH/DELETE         | `/api/activities/[id]` | Update/Delete activity                                             |
-| GET/POST            | `/api/goals`           | List (filter: type, completed) / Create                            |
-| PATCH               | `/api/goals/[id]`      | Update goal                                                        |
+| GET/POST            | `/api/goals`           | List (filter: type, completed, includeBreakdown) / Create          |
+| PATCH/DELETE        | `/api/goals/[id]`      | Update (supports incrementValue, auto-complete) / Delete goal      |
 | GET/POST            | `/api/clients`         | List (filter: status, healthScore, search) / Create                |
 | GET/PATCH/DELETE     | `/api/clients/[id]`    | Get (with projects, opportunities) / Update / Delete               |
 | GET/POST            | `/api/projects`        | List (filter: status, clientId) / Create                           |
@@ -1418,7 +1421,7 @@ See `/prisma/schema.prisma` for full schema with all models:
 
 **Version:** 1.4
 **Last Updated:** January 2026
-**Status:** Phase 1 Complete, Phase 1.5 Hardening Complete, Phase 2 Creative Library + Day Builder UX Overhaul Complete, Tweet Drafts Module Complete
+**Status:** Phase 1 Complete, Phase 1.5 Hardening Complete, Phase 2 Creative Library + Day Builder UX Overhaul Complete, Tweet Drafts Module Complete, Activity Presets Complete, Goal Progress & Cascades Complete
 
 ---
 

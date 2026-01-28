@@ -189,14 +189,16 @@ model Goal {
   type         GoalType
   targetValue  Int?      @map("target_value")
   currentValue Int       @default(0) @map("current_value")
+  startDate    DateTime? @map("start_date")
   dueDate      DateTime? @map("due_date")
   completedAt  DateTime? @map("completed_at")
   createdAt    DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @updatedAt @map("updated_at")
 
   // Relations
-  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tasks Task[]
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tasks        Task[]
+  libraryItems LibraryItem[]
 
   @@index([userId])
   @@index([type])
@@ -354,6 +356,7 @@ model Asset {
 model LibraryItem {
   id          String          @id @default(uuid())
   userId      String          @map("user_id")
+  goalId      String?         @map("goal_id")
   type        LibraryItemType
   title       String
   description String?
@@ -372,9 +375,11 @@ model LibraryItem {
 
   // Relations
   user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  goal   Goal?   @relation(fields: [goalId], references: [id], onDelete: SetNull)
   assets Asset[]
 
   @@index([userId])
+  @@index([goalId])
   @@index([type])
   @@map("library_items")
 }

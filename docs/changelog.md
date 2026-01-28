@@ -13,6 +13,80 @@ _Next: Database migration, X/Twitter API integration, Intel Feed + AI Hub (Phase
 
 ---
 
+## [0.8.0] - 2026-01-28
+
+### Added
+
+**Goal Progress & Cascades**
+
+Comprehensive goal progress tracking system with pace calculation, library-goal linking, and bidirectional cascade effects on task/library mutations.
+
+**Schema Changes**
+- Added `startDate` field to `Goal` model for pace tracking
+- Added `goalId` field to `LibraryItem` model for library-goal linking
+- Added `libraryItems` relation on `Goal` model
+
+**Goal Cascades Utility**
+- New `src/lib/utils/goal-cascades.ts` with `computeBreakdown()` function
+- Computes: `expectedPerWeek`, `expectedPerDay`, `expectedByNow`, `isOnTrack`, `progressPercent`
+- Based on `startDate`/`dueDate` or goal type fallbacks (daily=1d, weekly=7d, monthly=30d, yearly=365d)
+
+**Goal API Enhancements**
+- `DELETE /api/goals/[id]` — delete a goal
+- `PATCH /api/goals/[id]` — supports atomic `incrementValue` field for safe progress updates
+- Auto-completes goal when `currentValue` reaches `targetValue`; reopens when decremented below
+- `GET /api/goals` — new `includeBreakdown=true` query param returns pace data with each goal
+- `POST /api/goals` — supports `startDate` field
+- Zod validation schemas extracted to `src/lib/validations/goal.schema.ts`
+
+**Task Completion Cascade Fixes**
+- Task revert (DONE → non-DONE status): decrements linked goal's `currentValue` and reopens auto-completed goals
+- Task revert: decrements linked activity's `timesUsed`
+- Task delete (when status was DONE): decrements linked goal's `currentValue`
+- Task completion: auto-completes goal when target reached (was missing before)
+
+**Library-Goal Integration**
+- LibraryItem can now link to a Goal (`goalId` field)
+- Creating a library item with `goalId` auto-increments goal progress
+- Updating a library item's `goalId` decrements old goal and increments new goal
+- Deleting a library item with `goalId` decrements goal progress
+- Library detail API includes linked goal data
+- `LibraryItemForm` has goal dropdown (grouped by type via `<optgroup>`)
+- Library mutations invalidate goals query cache
+
+**New Components**
+- `GoalCard` — full goal card with on-track indicator dot, progress bar, breakdown chips (~/wk, ~/day), linked item counts, increment/decrement buttons, edit/delete dropdown
+- `GoalProgressBar` — visual progress bar with expected-by-now marker line, color-coded (green if on track, amber if slightly behind, red if far behind)
+- `GoalFormDialog` — rewritten with `startDate`/`dueDate` date pickers, type-aware default dates (e.g., Monthly defaults to 1st–last of month)
+
+**GoalsPanel Overhaul**
+- Removed type tabs (Daily/Weekly/Monthly) — now shows all incomplete goals in one unified list
+- Goals sorted by most behind pace first
+- Compact progress bars per goal with inline increment buttons
+- On-track count summary
+
+**Goals Page Overhaul**
+- Replaced type tabs with perspective views: Month, Week, Day
+- Primary/secondary goal grouping based on perspective (e.g., Month view: Monthly+Yearly primary, Weekly+Daily secondary)
+- Stats cards: active, on track, behind counts
+- Increment/decrement buttons on each goal card
+- Delete goals with confirmation dialog (`ConfirmDeleteDialog`)
+
+**Dashboard Changes**
+- Compact goals overview card with progress bars replacing old GoalsPanelContent
+- "View All" link to goals page
+- Active goal count in header
+- Uses `useIncrementGoal` for progress updates
+
+**TaskForm + LibraryItemForm**
+- Goal dropdown now grouped by type (`<optgroup>`: Monthly, Weekly, Daily, Yearly)
+
+**React Query Hooks**
+- `use-goals.ts`: Added `useIncrementGoal`, `useDeleteGoal`, `GoalWithCounts` type, `includeBreakdown` filter
+- `use-library.ts`: Added `goalId` to create/update interfaces, goals cache invalidation on all library mutations
+
+---
+
 ## [0.7.0] - 2026-01-27
 
 ### Changed
@@ -349,6 +423,7 @@ This release pivots LAUF OS from a content-creation tool to a full **Personal Op
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 0.8.0 | 2026-01-28 | Goal Progress & Cascades (pace tracking, library-goal linking, cascade effects, GoalCard/GoalProgressBar) |
 | 0.7.0 | 2026-01-27 | Activity Presets (19 fixed presets replacing user-created catalog), TimeBlock category colors |
 | 0.6.0 | 2026-01-27 | Tweet Drafts module (Social Manager), TaskBacklog, calendar redesign, new UI components |
 | 0.5.0 | 2026-01-27 | Creative Library module + Day Builder UX Overhaul (drag-and-drop, CommandSidebar, TaskForm tabs) |
@@ -363,17 +438,17 @@ This release pivots LAUF OS from a content-creation tool to a full **Personal Op
 
 ## Upcoming Versions
 
-### 0.8.0 - Intel Feed & AI Hub
+### 0.9.0 - Intel Feed & AI Hub
 - RSS feeds
 - Article summaries
 - AI tool tracking
 
-### 0.9.0 - Social Publishing
+### 1.0.0 - Social Publishing
 - X/Twitter API integration
 - Tweet scheduling
 - Analytics dashboard
 
-### 1.0.0 - Full MVP
+### 1.1.0 - Full MVP
 - All 9 modules functional
 - Mobile-friendly
 - Daily usable

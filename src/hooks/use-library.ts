@@ -49,6 +49,7 @@ export interface CreateLibraryItemData {
   isShowcased?: boolean
   isForSale?: boolean
   price?: number
+  goalId?: string
 }
 
 async function createLibraryItem(data: CreateLibraryItemData): Promise<LibraryItem> {
@@ -77,6 +78,7 @@ export interface UpdateLibraryItemData {
   isShowcased?: boolean
   isForSale?: boolean
   price?: number | null
+  goalId?: string | null
 }
 
 async function updateLibraryItem({ id, ...data }: UpdateLibraryItemData): Promise<LibraryItem> {
@@ -117,6 +119,7 @@ export function useCreateLibraryItem() {
     mutationFn: createLibraryItem,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['library'] })
+      queryClient.invalidateQueries({ queryKey: ['goals'] })
     },
   })
 }
@@ -127,6 +130,7 @@ export function useUpdateLibraryItem() {
     mutationFn: updateLibraryItem,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['library'] })
+      queryClient.invalidateQueries({ queryKey: ['goals'] })
     },
   })
 }
@@ -137,6 +141,7 @@ export function useDeleteLibraryItem() {
     mutationFn: deleteLibraryItem,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['library'] })
+      queryClient.invalidateQueries({ queryKey: ['goals'] })
     },
   })
 }

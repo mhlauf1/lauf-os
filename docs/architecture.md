@@ -2,7 +2,7 @@
 
 > LAUF OS System Architecture Documentation
 
-**Status:** MVP Phase 1 Complete + Phase 1.5 Hardening Complete + Phase 2 Creative Library + Day Builder UX Overhaul Complete + Tweet Drafts Module Complete + Activity Presets Complete
+**Status:** MVP Phase 1 Complete + Phase 1.5 Hardening Complete + Phase 2 Creative Library + Day Builder UX Overhaul Complete + Tweet Drafts Module Complete + Activity Presets Complete + Goal Progress & Cascades Complete
 
 **Related Documentation:**
 - [MVP Checklist](./mvp-checklist.md) - Implementation progress
@@ -96,8 +96,8 @@ lauf-os/
 │   │       │   ├── route.ts           # GET, POST
 │   │       │   └── [id]/route.ts      # GET, PATCH, DELETE
 │   │       ├── goals/
-│   │       │   ├── route.ts           # GET, POST
-│   │       │   └── [id]/route.ts      # PATCH
+│   │       │   ├── route.ts           # GET (incl. breakdown), POST
+│   │       │   └── [id]/route.ts      # PATCH (incl. incrementValue), DELETE
 │   │       ├── library/
 │   │       │   ├── route.ts           # GET, POST
 │   │       │   └── [id]/route.ts      # GET, PATCH, DELETE
@@ -116,6 +116,9 @@ lauf-os/
 │   │   │   │   ├── ActivityCatalog.tsx # Read-only activity preset grid (draggable cards)
 │   │   │   │   ├── CommandSidebar.tsx  # Tabbed sidebar (Goals / Activities)
 │   │   │   │   ├── DailyTimeline.tsx   # Timeline with droppable empty slots
+│   │   │   │   ├── GoalCard.tsx        # Goal card with progress, increment, edit/delete
+│   │   │   │   ├── GoalProgressBar.tsx # Progress bar with expected-by-now marker
+│   │   │   │   ├── GoalFormDialog.tsx  # Goal create dialog with startDate/dueDate
 │   │   │   │   └── GoalsPanel.tsx      # Goals panel + GoalsPanelContent export
 │   │   │   ├── library/              # Creative Library components
 │   │   │   │   ├── LibraryItemCard.tsx
@@ -141,10 +144,11 @@ lauf-os/
 │   │   │   ├── client.ts             # Browser client
 │   │   │   ├── server.ts             # Server client
 │   │   │   └── middleware.ts
-│   │   ├── validations/
+│   │   ├── validations/              # Zod schemas (goal.schema.ts, library.schema.ts, etc.)
 │   │   └── utils/
 │   │       ├── cn.ts
-│   │       └── encrypt.ts
+│   │       ├── encrypt.ts
+│   │       └── goal-cascades.ts      # Pace tracking: computeBreakdown()
 │   ├── hooks/
 │   │   ├── use-auth.ts               # Auth state management (useMemo for stable client)
 │   │   ├── use-tasks.ts              # React Query hooks for tasks
@@ -215,7 +219,7 @@ Used for all data that lives on the server:
 
 - Tasks and time blocks (`use-tasks.ts`)
 - Activity presets (`use-activities.ts` — read-only)
-- Goals and check-ins (`use-goals.ts`)
+- Goals and check-ins (`use-goals.ts` — includes `useIncrementGoal`, `useDeleteGoal`)
 - Clients (`use-clients.ts`)
 - Projects (`use-projects.ts`)
 - Library items (`use-library.ts`)
@@ -274,7 +278,7 @@ Prisma provides type-safe database access with:
 | `User` | User profile, preferences, timezone |
 | `Task` | 90-minute time blocks with categories; links to Activity + Goal |
 | `Activity` | 19 fixed activity presets (auto-synced from config) that pre-fill task creation |
-| `Goal` | Daily/weekly/monthly goals with progress; auto-incremented by task completion |
+| `Goal` | Daily/weekly/monthly/yearly goals with progress, startDate, pace tracking; auto-incremented by task completion and library item creation |
 | `Client` | Client info, health scores, credentials |
 | `Project` | Project pipeline with statuses |
 | `Asset` | Files, screenshots, documents |
@@ -357,7 +361,10 @@ components/modules/
 │   ├── ActivityCatalog.tsx # Read-only activity preset grid for Day Builder (draggable)
 │   ├── DailyTimeline.tsx   # Hour-by-hour view with droppable slots
 │   ├── DayColumn.tsx       # Calendar week view day column
-│   └── GoalsPanel.tsx      # Goals sidebar
+│   ├── GoalCard.tsx        # Goal card with progress, increment/decrement, edit/delete
+│   ├── GoalProgressBar.tsx # Progress bar with expected-by-now marker
+│   ├── GoalFormDialog.tsx  # Create goal with startDate/dueDate
+│   └── GoalsPanel.tsx      # Goals sidebar (unified view, no type tabs)
 └── clients/                # Client CRM
     ├── HealthScoreBadge.tsx
     ├── ClientCard.tsx
@@ -427,7 +434,11 @@ export function TaskCard({ task, onEdit }: TaskCardProps) {
 | **Drag & Drop** | @dnd-kit/core | DnD from activity catalog to timeline |
 | **Calendar dates** | parseCalendarDate() | Strip UTC from Prisma @db.Date to avoid timezone off-by-one |
 | **Activity presets** | Config + lazy DB sync | 19 fixed presets defined in config, auto-synced to DB on GET |
+| **Goal cascades** | computeBreakdown() utility | Pace tracking based on startDate/dueDate with type fallbacks |
+| **Atomic goal increments** | incrementValue in PATCH | Safe concurrent progress updates, auto-complete/reopen |
+| **Library-goal linking** | goalId on LibraryItem | Library items auto-increment/decrement linked goal progress |
+| **Goal perspective views** | Month/Week/Day | Goals page groups by primary/secondary based on perspective |
 
 ---
 
-_Last updated: January 2026 (v0.7.0 — Activity Presets + UX Refinements)_
+_Last updated: January 2026 (v0.8.0 — Goal Progress & Cascades)_

@@ -50,7 +50,7 @@ All API routes return `{ data: T | null, error: string | null }`.
 - `User` - Supabase auth integration, timezone, preferences
 - `Task` - 90-min blocks, category/priority/energy, links to Activity + Goal
 - `Activity` - 19 fixed activity presets (system-managed, auto-synced from config), tracks usage stats
-- `Goal` - Daily/Weekly/Monthly/Yearly with targetValue/currentValue progress
+- `Goal` - Daily/Weekly/Monthly/Yearly with targetValue/currentValue progress, startDate for pace tracking, linked to Tasks and LibraryItems
 
 **Client CRM Models:**
 - `Client` - Health score (GREEN/YELLOW/RED), status, financial tracking
@@ -63,7 +63,7 @@ All API routes return `{ data: T | null, error: string | null }`.
 |------|---------|
 | `use-tasks.ts` | `useTasks`, `useCreateTask`, `useUpdateTask`, `useDeleteTask` |
 | `use-activities.ts` | `useActivities` (read-only — presets are system-managed) |
-| `use-goals.ts` | `useGoals`, `useCreateGoal`, `useUpdateGoal` |
+| `use-goals.ts` | `useGoals`, `useCreateGoal`, `useUpdateGoal`, `useIncrementGoal`, `useDeleteGoal` |
 | `use-clients.ts` | `useClients`, `useClient`, `useCreateClient`, `useUpdateClient`, `useDeleteClient` |
 | `use-projects.ts` | `useProjects`, `useProject`, `useCreateProject`, `useUpdateProject`, `useDeleteProject` |
 | `use-library.ts` | `useLibrary`, `useLibraryItem`, `useCreateLibraryItem`, `useUpdateLibraryItem`, `useDeleteLibraryItem` |
@@ -82,9 +82,9 @@ All mutations auto-invalidate related query caches.
 
 | # | Module | Phase | Status |
 |---|--------|-------|--------|
-| 1 | Command Center | 1 | Complete + Hardened + DnD UX Overhaul |
+| 1 | Command Center | 1 | Complete + Hardened + DnD UX Overhaul + Goal Progress & Cascades |
 | 2 | Client CRM | 1 | Complete + Hardened (toasts, delete confirmations, cache fixes) |
-| 3 | Creative Library | 2 | Complete (CRUD, search, type filters, detail views) |
+| 3 | Creative Library | 2 | Complete (CRUD, search, type filters, detail views, goal linking) |
 | 4 | Health Tracker | 4 | Planned |
 | 5 | Financial Tracker | 4 | Planned |
 | 6 | Intel Feed | 3 | Planned |
@@ -104,8 +104,27 @@ All mutations auto-invalidate related query caches.
 
 When a task is marked DONE:
 1. `task.completedAt` is set
-2. If linked to a Goal: `goal.currentValue` increments by 1
+2. If linked to a Goal: `goal.currentValue` increments by 1; auto-completes goal if target reached
 3. If linked to an Activity: `activity.timesUsed` increments, `lastUsed` updates
+
+When a task is reverted from DONE to another status:
+1. `task.completedAt` is cleared
+2. If linked to a Goal: `goal.currentValue` decrements by 1; reopens goal if it was auto-completed
+3. If linked to an Activity: `activity.timesUsed` decrements
+
+When a completed task is deleted:
+1. If linked to a Goal: `goal.currentValue` decrements by 1; reopens goal if auto-completed
+
+### Library-Goal Side Effects
+
+When a library item is created with `goalId`:
+- Goal's `currentValue` increments by 1; auto-completes if target reached
+
+When a library item's `goalId` changes:
+- Old goal decrements, new goal increments
+
+When a library item with `goalId` is deleted:
+- Goal's `currentValue` decrements by 1
 
 ## Directory Structure
 
@@ -142,8 +161,8 @@ src/
 | `/api/tasks/[id]` | PATCH, DELETE | Update/delete task (auto-increments goal+activity on completion) |
 | `/api/activities` | GET | List activity presets (auto-syncs from config; POST returns 403) |
 | `/api/activities/[id]` | PATCH | Update usage stats only (timesUsed/lastUsed; DELETE returns 403) |
-| `/api/goals` | GET, POST | List/create goals (filters: type, completed) |
-| `/api/goals/[id]` | PATCH | Update goal |
+| `/api/goals` | GET, POST | List/create goals (filters: type, completed, includeBreakdown) |
+| `/api/goals/[id]` | PATCH, DELETE | Update (supports incrementValue, auto-complete) / Delete goal |
 | `/api/clients` | GET, POST | List/create clients (filters: status, healthScore, search) |
 | `/api/clients/[id]` | GET, PATCH, DELETE | Get/update/delete client |
 | `/api/projects` | GET, POST | List/create projects (filters: status, clientId) |

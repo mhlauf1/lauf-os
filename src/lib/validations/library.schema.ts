@@ -14,6 +14,7 @@ export const createLibraryItemSchema = z.object({
   isShowcased: z.boolean().optional(),
   isForSale: z.boolean().optional(),
   price: z.number().min(0).optional(),
+  goalId: z.string().uuid().optional(),
 })
 
 export const updateLibraryItemSchema = z.object({
@@ -30,6 +31,7 @@ export const updateLibraryItemSchema = z.object({
   isShowcased: z.boolean().optional(),
   isForSale: z.boolean().optional(),
   price: z.number().min(0).optional().nullable(),
+  goalId: z.string().uuid().optional().nullable(),
 })
 
 export type CreateLibraryItemInput = z.infer<typeof createLibraryItemSchema>

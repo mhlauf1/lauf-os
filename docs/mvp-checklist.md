@@ -272,7 +272,47 @@ The MVP focuses on two core modules:
 
 ---
 
-## Phase 4: Integration & Polish
+## Phase 4: Goal Progress & Cascades (Complete)
+
+**Goal**: Comprehensive goal progress tracking with pace calculation, library-goal linking, and cascade effects
+
+### Schema Changes
+- [x] Added `startDate` field to Goal model
+- [x] Added `goalId` field to LibraryItem model
+- [x] Added `libraryItems` relation on Goal model
+
+### Goal API Enhancements
+- [x] `DELETE /api/goals/[id]` endpoint
+- [x] `PATCH /api/goals/[id]` supports atomic `incrementValue`
+- [x] Auto-complete/reopen goals when target reached/decremented
+- [x] `GET /api/goals` supports `includeBreakdown=true` for pace data
+- [x] Zod validation schemas in `goal.schema.ts`
+
+### Goal Cascades
+- [x] `computeBreakdown()` utility (expectedPerWeek, expectedPerDay, expectedByNow, isOnTrack)
+- [x] Task revert (DONE → non-DONE) decrements goal + activity
+- [x] Task delete (when DONE) decrements goal
+- [x] Task completion auto-completes goal when target reached
+- [x] Library item create/update/delete increments/decrements linked goal
+
+### New Components
+- [x] `GoalCard` — progress bar, increment/decrement, edit/delete, on-track indicator
+- [x] `GoalProgressBar` — visual bar with expected-by-now marker, color-coded
+- [x] `GoalFormDialog` — with startDate/dueDate, type-aware defaults
+
+### Page Overhauls
+- [x] GoalsPanel: unified view (no type tabs), sorted by behind-pace first
+- [x] Goals page: perspective views (Month/Week/Day), delete with confirmation
+- [x] Dashboard: compact goals overview with progress bars
+- [x] TaskForm + LibraryItemForm: goal dropdown grouped by type
+
+### React Query Hooks
+- [x] `useIncrementGoal`, `useDeleteGoal`, `GoalWithCounts` type
+- [x] Library mutations invalidate goals cache
+
+---
+
+## Phase 5: Integration & Polish
 
 **Goal**: Connect modules and add finishing touches
 
@@ -321,7 +361,8 @@ When complete, the app should:
 | Day Builder UX Overhaul | Complete | 2026-01-27 | 2026-01-27 |
 | Phase 3: Tweet Drafts | Complete | 2026-01-27 | 2026-01-27 |
 | Phase 3.5: Activity Presets | Complete | 2026-01-27 | 2026-01-27 |
-| Phase 4: Integration | In Progress | 2026-01-27 | - |
+| Phase 4: Goal Progress & Cascades | Complete | 2026-01-28 | 2026-01-28 |
+| Phase 5: Integration | In Progress | 2026-01-27 | - |
 
 ---
 
@@ -335,6 +376,7 @@ When complete, the app should:
 - **2026-01-27**: Day Builder UX Overhaul complete. `@dnd-kit/core` drag-and-drop from Activity Catalog to timeline slots, CommandSidebar with Goals/Activities tabs, TaskForm two-tab mode ("From Catalog" / "Manual"), timezone fix for Prisma `@db.Date` fields.
 - **2026-01-27**: Tweet Drafts module complete. TweetDraft model, full CRUD API with filters, React Query hooks, TweetDraftCard/Form/Grid components, social list + detail pages, navigation updated. Also added TaskBacklog component and redesigned calendar page with continuous timeline.
 - **2026-01-27**: Activity Presets complete. Replaced user-created Activity Catalog with 19 fixed presets. Config-driven with auto-sync on GET. Locked mutations. Simplified UX: description-first TaskForm, read-only catalog, category-colored TimeBlock borders.
+- **2026-01-28**: Goal Progress & Cascades complete. Added startDate to Goal, goalId to LibraryItem, goal-cascades utility for pace tracking, GoalCard/GoalProgressBar/GoalFormDialog components, GoalsPanel and Goals page overhauls (perspective views, increment/decrement), task revert/delete decrements goal progress, library-goal linking with auto-increment.
 - Focus on functionality over polish in MVP
 - Document any blockers or decisions made
 
@@ -351,4 +393,4 @@ When complete, the app should:
 
 ---
 
-_Last updated: 2026-01-27_
+_Last updated: 2026-01-28_

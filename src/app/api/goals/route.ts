@@ -3,14 +3,8 @@ import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { createServerClient } from '@/lib/supabase/server'
 import { ensureUser } from '@/lib/prisma/ensure-user'
-
-const createGoalSchema = z.object({
-  title: z.string().min(1).max(500),
-  description: z.string().max(5000).optional(),
-  type: z.enum(['DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY']),
-  targetValue: z.number().int().min(1).optional(),
-  dueDate: z.string().datetime().optional(),
-})
+import { createGoalSchema } from '@/lib/validations/goal.schema'
+import { computeBreakdown } from '@/lib/utils/goal-cascades'
 
 export async function GET(request: NextRequest) {
   try {
@@ -26,6 +20,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const type = searchParams.get('type')
     const completed = searchParams.get('completed')
+    const includeBreakdown = searchParams.get('includeBreakdown') === 'true'
 
     const goals = await prisma.goal.findMany({
       where: {
@@ -35,7 +30,26 @@ export async function GET(request: NextRequest) {
         ...(completed === 'false' && { completedAt: null }),
       },
       orderBy: [{ completedAt: 'asc' }, { dueDate: 'asc' }],
+      include: {
+        _count: {
+          select: { tasks: true, libraryItems: true },
+        },
+      },
     })
+
+    if (includeBreakdown) {
+      const enriched = goals.map((goal) => ({
+        ...goal,
+        breakdown: computeBreakdown({
+          type: goal.type,
+          targetValue: goal.targetValue,
+          currentValue: goal.currentValue,
+          startDate: goal.startDate,
+          dueDate: goal.dueDate,
+        }),
+      }))
+      return NextResponse.json({ data: enriched })
+    }
 
     return NextResponse.json({ data: goals })
   } catch (error) {
@@ -70,6 +84,9 @@ export async function POST(request: NextRequest) {
         description: validatedData.description,
         type: validatedData.type,
         targetValue: validatedData.targetValue,
+        startDate: validatedData.startDate
+          ? new Date(validatedData.startDate)
+          : null,
         dueDate: validatedData.dueDate
           ? new Date(validatedData.dueDate)
           : null,

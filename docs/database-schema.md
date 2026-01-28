@@ -24,12 +24,12 @@ LAUF OS uses Prisma 7 as the ORM with PostgreSQL (via Supabase). The schema supp
 | `User` | MVP | Complete |
 | `Task` | MVP | Complete (+ activityId, goalId) |
 | `Activity` | MVP | Complete |
-| `Goal` | MVP | Complete (+ tasks relation) |
+| `Goal` | MVP | Complete (+ tasks, libraryItems relations, startDate) |
 | `Client` | MVP | Complete |
 | `Project` | MVP | Complete |
 | `Opportunity` | MVP | Complete |
 | `Asset` | MVP | Complete |
-| `LibraryItem` | Phase 2 | Schema ready |
+| `LibraryItem` | Phase 2 | Complete (+ goalId for goal linking) |
 | `Workout` | Phase 4 | Schema ready |
 | `DailyCheckIn` | Phase 4 | Schema ready |
 | `Transaction` | Phase 4 | Schema ready |
@@ -214,7 +214,7 @@ model Activity {
 
 ### Goal
 
-Goals track progress toward targets. When a task linked to a goal is completed, the goal's `currentValue` is auto-incremented.
+Goals track progress toward targets. When a task linked to a goal is completed, the goal's `currentValue` is auto-incremented. Creating a library item linked to a goal also increments progress. Reverting or deleting a completed task/library item decrements progress.
 
 ```prisma
 model Goal {
@@ -225,13 +225,15 @@ model Goal {
   type         GoalType  // DAILY, WEEKLY, MONTHLY, YEARLY
   targetValue  Int?      @map("target_value")
   currentValue Int       @default(0) @map("current_value")
+  startDate    DateTime? @map("start_date")
   dueDate      DateTime? @map("due_date")
   completedAt  DateTime? @map("completed_at")
   createdAt    DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @updatedAt @map("updated_at")
 
-  user  User   @relation(...)
-  tasks Task[]
+  user         User          @relation(...)
+  tasks        Task[]
+  libraryItems LibraryItem[]
 
   @@map("goals")
 }

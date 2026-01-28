@@ -1,59 +1,78 @@
 'use client'
 
-import { Target, CheckCircle, Circle, Plus } from 'lucide-react'
+import { Target, Plus } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import type { Goal, GoalType } from '@prisma/client'
+import { GoalProgressBar } from './GoalProgressBar'
+import type { GoalWithCounts } from '@/hooks/use-goals'
+import type { GoalBreakdown } from '@/lib/utils/goal-cascades'
+import { computeBreakdown } from '@/lib/utils/goal-cascades'
 
 interface GoalsPanelProps {
-  goals: Goal[]
-  activeType?: GoalType
-  onTypeChange?: (type: GoalType) => void
+  goals: GoalWithCounts[]
   onGoalClick?: (id: string) => void
   onAddGoal?: () => void
-  onToggleComplete?: (id: string, completed: boolean) => void
+  onIncrement?: (id: string, value: number) => void
 }
 
-const goalTypes: { value: GoalType; label: string }[] = [
-  { value: 'DAILY', label: 'Daily' },
-  { value: 'WEEKLY', label: 'Weekly' },
-  { value: 'MONTHLY', label: 'Monthly' },
-]
+const typeLabels: Record<string, string> = {
+  DAILY: 'D',
+  WEEKLY: 'W',
+  MONTHLY: 'M',
+  YEARLY: 'Y',
+}
+
+const typeBgColors: Record<string, string> = {
+  DAILY: 'bg-blue-500/10 text-blue-400',
+  WEEKLY: 'bg-violet-500/10 text-violet-400',
+  MONTHLY: 'bg-amber-500/10 text-amber-400',
+  YEARLY: 'bg-green-500/10 text-green-400',
+}
+
+function getBreakdown(goal: GoalWithCounts): GoalBreakdown | undefined {
+  if (goal.breakdown) return goal.breakdown
+  if (!goal.targetValue) return undefined
+  return computeBreakdown({
+    type: goal.type,
+    targetValue: goal.targetValue,
+    currentValue: goal.currentValue,
+    startDate: goal.startDate,
+    dueDate: goal.dueDate,
+  })
+}
 
 export function GoalsPanelContent({
   goals,
-  activeType = 'WEEKLY',
-  onTypeChange,
   onGoalClick,
   onAddGoal,
-  onToggleComplete,
+  onIncrement,
 }: GoalsPanelProps) {
-  const filteredGoals = goals.filter((g) => g.type === activeType)
-  const completedCount = filteredGoals.filter((g) => g.completedAt).length
-  const totalCount = filteredGoals.length
-  const progressPercentage =
-    totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0
+  // Show all incomplete goals, sorted by most behind pace first
+  const incompleteGoals = goals
+    .filter((g) => !g.completedAt)
+    .sort((a, b) => {
+      const breakdownA = getBreakdown(a)
+      const breakdownB = getBreakdown(b)
+      // Goals that are behind come first
+      if (breakdownA?.isOnTrack === false && breakdownB?.isOnTrack !== false) return -1
+      if (breakdownA?.isOnTrack !== false && breakdownB?.isOnTrack === false) return 1
+      // Then by progress percent ascending
+      const pctA = breakdownA?.progressPercent ?? 0
+      const pctB = breakdownB?.progressPercent ?? 0
+      return pctA - pctB
+    })
+
+  const totalCount = goals.filter((g) => !g.completedAt).length
+  const onTrackCount = incompleteGoals.filter((g) => getBreakdown(g)?.isOnTrack).length
 
   return (
     <div className="space-y-3">
-      {/* Top row: Tabs + Add */}
+      {/* Top row: summary + Add */}
       <div className="flex items-center justify-between">
-        <div className="flex gap-1 rounded-md bg-surface-elevated p-0.5">
-          {goalTypes.map((type) => (
-            <button
-              key={type.value}
-              onClick={() => onTypeChange?.(type.value)}
-              className={cn(
-                'rounded px-2 py-1 text-xs font-medium transition-colors',
-                activeType === type.value
-                  ? 'bg-surface text-text-primary shadow-sm'
-                  : 'text-text-secondary hover:text-text-primary'
-              )}
-            >
-              {type.label}
-            </button>
-          ))}
-        </div>
+        <span className="text-xs text-text-secondary">
+          {totalCount} active
+          {totalCount > 0 && ` · ${onTrackCount} on track`}
+        </span>
         <button
           onClick={onAddGoal}
           className="flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-text-secondary hover:text-text-primary hover:bg-surface-elevated transition-colors"
@@ -63,35 +82,26 @@ export function GoalsPanelContent({
         </button>
       </div>
 
-      {/* Progress bar */}
-      <div className="flex items-center gap-2">
-        <span className="text-xs font-medium text-text-secondary whitespace-nowrap">
-          {completedCount}/{totalCount}
-        </span>
-        <div className="h-1.5 flex-1 rounded-full bg-surface-elevated">
-          <div
-            className="h-full rounded-full bg-accent transition-all"
-            style={{ width: `${progressPercentage}%` }}
-          />
-        </div>
-        <span className="text-xs text-text-tertiary">{progressPercentage}%</span>
-      </div>
-
-      {/* Goals List — compact inline items */}
-      <div className="flex flex-wrap gap-2">
-        {filteredGoals.length === 0 ? (
-          <p className="text-xs text-text-tertiary py-1">
-            No {activeType.toLowerCase()} goals set
-          </p>
+      {/* Unified goals list */}
+      <div className="space-y-2">
+        {incompleteGoals.length === 0 ? (
+          <p className="text-xs text-text-tertiary py-1">No active goals</p>
         ) : (
-          filteredGoals.map((goal) => (
-            <CompactGoalItem
-              key={goal.id}
-              goal={goal}
-              onClick={() => onGoalClick?.(goal.id)}
-              onToggleComplete={onToggleComplete}
-            />
-          ))
+          incompleteGoals.map((goal) => {
+            const breakdown = getBreakdown(goal)
+            const hasTarget = goal.targetValue !== null && goal.targetValue > 0
+
+            return (
+              <CompactGoalRow
+                key={goal.id}
+                goal={goal}
+                breakdown={breakdown}
+                hasTarget={hasTarget}
+                onClick={() => onGoalClick?.(goal.id)}
+                onIncrement={onIncrement}
+              />
+            )
+          })
         )}
       </div>
     </div>
@@ -114,59 +124,65 @@ export function GoalsPanel(props: GoalsPanelProps) {
   )
 }
 
-interface GoalItemProps {
-  goal: Goal
+interface CompactGoalRowProps {
+  goal: GoalWithCounts
+  breakdown?: GoalBreakdown
+  hasTarget: boolean
   onClick?: () => void
-  onToggleComplete?: (id: string, completed: boolean) => void
+  onIncrement?: (id: string, value: number) => void
 }
 
-function CompactGoalItem({ goal, onClick, onToggleComplete }: GoalItemProps) {
-  const isCompleted = !!goal.completedAt
-  const hasTarget = goal.targetValue !== null
-  const progress = hasTarget
-    ? Math.min(
-        100,
-        Math.round((goal.currentValue / (goal.targetValue || 1)) * 100)
-      )
-    : isCompleted
-    ? 100
-    : 0
-
+function CompactGoalRow({ goal, breakdown, hasTarget, onClick, onIncrement }: CompactGoalRowProps) {
   return (
-    <div
-      className={cn(
-        'flex items-center gap-2 rounded-md border border-border px-2.5 py-1.5 text-xs transition-colors',
-        'hover:border-border/80 hover:bg-surface-elevated',
-        isCompleted && 'opacity-50'
-      )}
-    >
-      <button
-        onClick={(e) => {
-          e.stopPropagation()
-          onToggleComplete?.(goal.id, !isCompleted)
-        }}
-        className="transition-colors hover:opacity-80"
-      >
-        {isCompleted ? (
-          <CheckCircle className="h-3.5 w-3.5 text-green-400" />
-        ) : (
-          <Circle className="h-3.5 w-3.5 text-text-tertiary hover:text-accent" />
+    <div className="rounded-md border border-border p-2.5 hover:bg-surface-elevated transition-colors">
+      <div className="flex items-center gap-2">
+        {/* On-track dot */}
+        {hasTarget && breakdown && (
+          <span
+            className={cn(
+              'h-1.5 w-1.5 rounded-full shrink-0',
+              breakdown.isOnTrack ? 'bg-green-400' : 'bg-amber-400'
+            )}
+          />
         )}
-      </button>
-      <button onClick={onClick} className="text-left">
+
+        {/* Title */}
+        <button onClick={onClick} className="flex-1 text-left text-xs font-medium truncate">
+          {goal.title}
+        </button>
+
+        {/* Type badge */}
         <span
           className={cn(
-            'font-medium',
-            isCompleted && 'line-through text-text-tertiary'
+            'text-[9px] font-bold px-1 py-0 rounded shrink-0',
+            typeBgColors[goal.type]
           )}
         >
-          {goal.title}
+          {typeLabels[goal.type]}
         </span>
-      </button>
+
+        {/* Quick +1 button */}
+        {hasTarget && (
+          <button
+            onClick={() => onIncrement?.(goal.id, 1)}
+            className="rounded px-1.5 py-0.5 text-[10px] font-medium text-text-tertiary hover:text-text-primary hover:bg-surface-elevated transition-colors shrink-0"
+          >
+            +1
+          </button>
+        )}
+      </div>
+
+      {/* Small progress bar */}
       {hasTarget && (
-        <span className="text-text-tertiary ml-1">
-          {goal.currentValue}/{goal.targetValue}
-        </span>
+        <div className="mt-1.5">
+          <GoalProgressBar
+            current={goal.currentValue}
+            target={goal.targetValue!}
+            expectedByNow={breakdown?.expectedByNow}
+            size="sm"
+            isOnTrack={breakdown?.isOnTrack}
+          />
+        </div>
       )}
     </div>
   )

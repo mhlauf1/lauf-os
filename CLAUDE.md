@@ -80,11 +80,11 @@ src/
 │       ├── projects/       # GET, POST + [id] GET, PATCH, DELETE
 │       ├── library/        # GET, POST + [id] GET, PATCH, DELETE
 │       ├── tweets/         # GET, POST + [id] GET, PATCH, DELETE
-│       └── goals/          # GET, POST + [id] PATCH
+│       └── goals/          # GET, POST + [id] PATCH, DELETE
 ├── components/
 │   ├── ui/                 # shadcn/ui primitives
 │   ├── modules/            # Module-specific components
-│   │   ├── command/        # TimeBlock, TaskCard, TaskForm, TaskBacklog, ActivityCatalog (read-only), CommandSidebar, DailyTimeline, DayColumn, etc.
+│   │   ├── command/        # TimeBlock, TaskCard, TaskForm, TaskBacklog, ActivityCatalog (read-only), CommandSidebar, DailyTimeline, DayColumn, GoalCard, GoalFormDialog, GoalProgressBar, etc.
 │   │   ├── clients/        # ClientCard, HealthScoreBadge, etc.
 │   │   ├── library/        # LibraryItemCard, LibraryGrid, LibraryItemForm, TagInput
 │   │   └── social/         # TweetDraftCard, TweetDraftForm, TweetGrid
@@ -96,8 +96,8 @@ src/
 │   ├── supabase/           # Supabase clients
 │   ├── ai/                 # AI service clients
 │   ├── validations/        # Zod schemas
-│   └── utils/              # Utility functions
-├── hooks/                  # React hooks (use-tasks, use-activities, use-goals, use-clients, use-projects, use-library, use-tweet-drafts, use-auth)
+│   └── utils/              # Utility functions (goal-cascades, etc.)
+├── hooks/                  # React hooks (use-tasks, use-activities, use-goals (incl. useIncrementGoal, useDeleteGoal), use-clients, use-projects, use-library, use-tweet-drafts, use-auth)
 ├── stores/                 # Zustand stores
 ├── types/                  # TypeScript types
 └── config/                 # App configuration
@@ -122,7 +122,7 @@ Prisma schema located at `prisma/schema.prisma`. Key models:
 - **User** - App user with preferences and timezone
 - **Task** - 90-min blocks with category, priority, energy level; links to Activity + Goal
 - **Activity** - 19 fixed activity presets (system-managed, auto-synced) that pre-fill task creation
-- **Goal** - Daily/weekly/monthly/yearly goals with progress; auto-incremented by task completion
+- **Goal** - Daily/weekly/monthly/yearly goals with progress, startDate, dueDate; auto-incremented by task completion and library item creation; supports pace tracking via cascades
 
 ### Client CRM Models
 - **Client** - Client with health score, status, credentials
@@ -132,6 +132,7 @@ Prisma schema located at `prisma/schema.prisma`. Key models:
 
 ### Social Manager Models
 - **TweetDraft** - Tweet draft with content (280 char limit), status, tags, thread support (tweetNumber/totalTweets)
+- **LibraryItem** - Creative library item with optional goalId for goal-linked progress tracking
 
 ### Enums
 - **TaskCategory**: DESIGN, CODE, CLIENT, LEARNING, FITNESS, ADMIN, SAAS, NETWORKING, PERSONAL, LEISURE, ROUTINE
@@ -243,7 +244,7 @@ Tasks are scheduled into 90-minute deep work blocks. Each task has:
 - **Energy Level** to match to time of day
 - **Scheduled Time** for calendar placement
 - **Activity link** (optional) — pre-fills from activity defaults
-- **Goal link** (optional) — auto-increments goal on completion
+- **Goal link** (optional) — auto-increments goal on completion; reverts decrement goal on status change back from DONE
 
 ### Health Score System
 
@@ -258,8 +259,9 @@ Clients have a health score (GREEN/YELLOW/RED) based on:
 - **Server state** (React Query): Tasks, activities, clients, projects, goals, library, tweet drafts
   - Hooks: `use-tasks.ts`, `use-activities.ts`, `use-goals.ts`, `use-clients.ts`, `use-projects.ts`, `use-library.ts`, `use-tweet-drafts.ts`
   - Each hook exports `useX`, `useCreateX`, `useUpdateX`, `useDeleteX` (except `use-activities.ts` which is read-only — `useActivities` only)
+  - `use-goals.ts` also exports `useIncrementGoal` and `useDeleteGoal`
   - `use-clients.ts` and `use-projects.ts` also export `useClient(id)` and `useProject(id)` for single-record fetching
-  - Mutations auto-invalidate related query caches
+  - Mutations auto-invalidate related query caches (including cross-model: library→goals, tasks→goals)
 - **Client state** (Zustand): UI state, filters, drafts
 
 ### Authentication
@@ -386,6 +388,25 @@ Clients have a health score (GREEN/YELLOW/RED) based on:
 - [x] Deleted `ActivityForm.tsx` component
 - [x] Category-colored left border on TimeBlock component (matches calendar view)
 - [x] `DayColumn` component for calendar week view
+
+**Goal Progress & Cascades** (Complete)
+- [x] Goal model: added `startDate` field for pace tracking
+- [x] LibraryItem model: added `goalId` field for library-goal linking
+- [x] Zod validation schemas (`src/lib/validations/goal.schema.ts`)
+- [x] Goal cascades utility (`src/lib/utils/goal-cascades.ts`): pace calculation (expectedPerWeek, expectedPerDay, expectedByNow, isOnTrack)
+- [x] `DELETE /api/goals/[id]` endpoint
+- [x] `PATCH /api/goals/[id]` supports atomic `incrementValue` and auto-completion/reopening
+- [x] `GET /api/goals` supports `includeBreakdown` query param for pace data
+- [x] Task revert (DONE → non-DONE) decrements linked goal + activity
+- [x] Task delete (when DONE) decrements linked goal progress
+- [x] Library items linked to goals auto-increment/decrement goal progress on create/update/delete
+- [x] New components: GoalCard, GoalProgressBar, GoalFormDialog (with startDate/dueDate)
+- [x] GoalsPanel overhaul: unified view (no type tabs), sorted by behind-pace first
+- [x] Goals page: perspective views (Month/Week/Day), primary/secondary grouping, increment/decrement buttons, delete with confirmation
+- [x] Dashboard: compact goals overview with progress bars and "View All" link
+- [x] TaskForm + LibraryItemForm: goal dropdown grouped by type (optgroup)
+- [x] React Query hooks: `useIncrementGoal`, `useDeleteGoal`, `GoalWithCounts` type
+- [x] Library mutations invalidate goals cache
 
 **Next Up:**
 - [ ] Database migration (waiting for credentials)
