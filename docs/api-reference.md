@@ -69,7 +69,7 @@ Get all tasks for the authenticated user.
 
 ### POST /api/tasks
 
-Create a new task.
+Create a new task. **Multiple tasks can be scheduled in the same time slot** for parallel work tracking.
 
 **Request Body:**
 ```json
@@ -77,8 +77,8 @@ Create a new task.
   "title": "Design homepage mockup",
   "category": "DESIGN",
   "priority": "HIGH",
-  "scheduledDate": "2026-01-26",
-  "scheduledTime": "09:00",
+  "scheduledDate": "2026-01-26T00:00:00.000Z",
+  "slotIndex": 0,
   "timeBlockMinutes": 90,
   "energyLevel": "DEEP_WORK",
   "projectId": "optional-project-id"

@@ -312,6 +312,24 @@ The MVP focuses on two core modules:
 
 ---
 
+## Phase 4.5: Multi-Task Time Slots (Complete)
+
+**Goal**: Allow multiple tasks per time slot for parallel work tracking
+
+### Schema Changes
+- [x] Removed `@@unique([userId, scheduledDate, slotIndex])` constraint from Task model
+
+### API Changes
+- [x] Removed slot conflict validation from `POST /api/tasks`
+- [x] Removed slot conflict validation from `PATCH /api/tasks/[id]`
+
+### Component Updates
+- [x] `DailyTimeline` supports multiple tasks per slot (`Map<number, Task[]>`)
+- [x] `TimeSlotRow` renders tasks as horizontal flex row with compact "+" button
+- [x] `TimeBlock` added `compact` prop for horizontal label style
+
+---
+
 ## Phase 5: Integration & Polish
 
 **Goal**: Connect modules and add finishing touches
@@ -362,6 +380,7 @@ When complete, the app should:
 | Phase 3: Tweet Drafts | Complete | 2026-01-27 | 2026-01-27 |
 | Phase 3.5: Activity Presets | Complete | 2026-01-27 | 2026-01-27 |
 | Phase 4: Goal Progress & Cascades | Complete | 2026-01-28 | 2026-01-28 |
+| Phase 4.5: Multi-Task Time Slots | Complete | 2026-01-28 | 2026-01-28 |
 | Phase 5: Integration | In Progress | 2026-01-27 | - |
 
 ---
@@ -377,6 +396,7 @@ When complete, the app should:
 - **2026-01-27**: Tweet Drafts module complete. TweetDraft model, full CRUD API with filters, React Query hooks, TweetDraftCard/Form/Grid components, social list + detail pages, navigation updated. Also added TaskBacklog component and redesigned calendar page with continuous timeline.
 - **2026-01-27**: Activity Presets complete. Replaced user-created Activity Catalog with 19 fixed presets. Config-driven with auto-sync on GET. Locked mutations. Simplified UX: description-first TaskForm, read-only catalog, category-colored TimeBlock borders.
 - **2026-01-28**: Goal Progress & Cascades complete. Added startDate to Goal, goalId to LibraryItem, goal-cascades utility for pace tracking, GoalCard/GoalProgressBar/GoalFormDialog components, GoalsPanel and Goals page overhauls (perspective views, increment/decrement), task revert/delete decrements goal progress, library-goal linking with auto-increment.
+- **2026-01-28**: Multi-Task Time Slots complete. Removed unique constraint on (userId, scheduledDate, slotIndex), removed slot conflict validation from API routes, DailyTimeline supports multiple tasks per slot, TimeBlock compact mode for horizontal labels.
 - Focus on functionality over polish in MVP
 - Document any blockers or decisions made
 

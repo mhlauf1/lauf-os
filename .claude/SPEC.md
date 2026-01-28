@@ -599,14 +599,15 @@ enum TweetDraftStatus {
 | **TaskForm Catalog Mode** | "From Catalog" / "Manual" tabs for quick activity picking  | Done   |
 | **Task Backlog**       | Draggable unscheduled tasks for scheduling onto timeline      | Done   |
 | **Calendar Redesign**  | Continuous timeline (6 AM–11 PM) with proportional positioning | Done   |
+| **Multi-Task Slots**   | Multiple tasks per slot displayed as compact horizontal labels | Done   |
 | **Context Preloader**  | Linked assets and project info per task                       | Planned |
 | **Prep Mode**          | AI suggests tomorrow's schedule                               | Planned |
 | **Weekly Review**      | What got done, what worked, next week planning                | Planned |
 
 ### UI Components
 
-- `DailyTimeline` - Main timeline view with time slots + droppable empty slots (`@dnd-kit/core`)
-- `TimeBlock` - 90-min block card with play/complete/pause actions
+- `DailyTimeline` - Main timeline view with time slots + droppable empty slots (`@dnd-kit/core`), supports multiple tasks per slot
+- `TimeBlock` - 90-min block card with play/complete/pause actions; supports `compact` mode for multi-task slots
 - `TaskCard` - Task in queue with category badge, priority, energy level
 - `TaskForm` - Create/edit task with "from activity" mode, "From Catalog" / "Manual" tabs, goal linking
 - `ActivityCatalog` - Activity picker grid with draggable cards (`useDraggable`)
@@ -1419,9 +1420,9 @@ See `/prisma/schema.prisma` for full schema with all models:
 
 ---
 
-**Version:** 1.4
+**Version:** 1.5
 **Last Updated:** January 2026
-**Status:** Phase 1 Complete, Phase 1.5 Hardening Complete, Phase 2 Creative Library + Day Builder UX Overhaul Complete, Tweet Drafts Module Complete, Activity Presets Complete, Goal Progress & Cascades Complete
+**Status:** Phase 1 Complete, Phase 1.5 Hardening Complete, Phase 2 Creative Library + Day Builder UX Overhaul Complete, Tweet Drafts Module Complete, Activity Presets Complete, Goal Progress & Cascades Complete, Multi-Task Time Slots Complete
 
 ---
 

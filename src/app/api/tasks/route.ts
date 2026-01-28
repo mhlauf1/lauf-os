@@ -23,11 +23,10 @@ const createTaskSchema = z.object({
   priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'URGENT']).optional(),
   status: z.enum(['TODO', 'IN_PROGRESS', 'BLOCKED', 'DONE']).optional(),
   scheduledDate: z.string().datetime().optional(),
-  scheduledTime: z.string().regex(/^\d{2}:\d{2}$/).optional(),
-  timeBlockMinutes: z.number().int().min(15).max(480).optional(),
+  slotIndex: z.number().int().min(0).max(9).optional(),
   energyLevel: z.enum(['DEEP_WORK', 'MODERATE', 'LIGHT']).optional(),
   projectId: z.string().uuid().optional(),
-  activityId: z.string().uuid().optional(),
+  activityId: z.string().optional(), // Accepts preset-{slug} format or UUID
   goalId: z.string().uuid().optional(),
 })
 
@@ -77,7 +76,7 @@ export async function GET(request: NextRequest) {
         ...(scheduled === 'true' && { scheduledDate: { not: null } }),
         ...(scheduled === 'false' && { scheduledDate: null }),
       },
-      orderBy: [{ scheduledDate: 'asc' }, { scheduledTime: 'asc' }],
+      orderBy: [{ scheduledDate: 'asc' }, { slotIndex: 'asc' }],
       include: {
         project: {
           select: {
@@ -120,6 +119,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const validatedData = createTaskSchema.parse(body)
 
+    // Don't store preset-style activityId in DB (no FK constraint)
+    // The activity info is already captured in title/category/energyLevel
     const task = await prisma.task.create({
       data: {
         userId: user.id,
@@ -131,11 +132,11 @@ export async function POST(request: NextRequest) {
         scheduledDate: validatedData.scheduledDate
           ? new Date(validatedData.scheduledDate)
           : null,
-        scheduledTime: validatedData.scheduledTime,
-        timeBlockMinutes: validatedData.timeBlockMinutes || 90,
+        slotIndex: validatedData.slotIndex,
+        timeBlockMinutes: 90, // Always 90 minutes
         energyLevel: validatedData.energyLevel || 'MODERATE',
         projectId: validatedData.projectId,
-        activityId: validatedData.activityId,
+        activityId: null, // Activities are config-based, not DB-linked
         goalId: validatedData.goalId,
       },
     })

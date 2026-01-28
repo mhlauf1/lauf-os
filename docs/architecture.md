@@ -2,7 +2,7 @@
 
 > LAUF OS System Architecture Documentation
 
-**Status:** MVP Phase 1 Complete + Phase 1.5 Hardening Complete + Phase 2 Creative Library + Day Builder UX Overhaul Complete + Tweet Drafts Module Complete + Activity Presets Complete + Goal Progress & Cascades Complete
+**Status:** MVP Phase 1 Complete + Phase 1.5 Hardening Complete + Phase 2 Creative Library + Day Builder UX Overhaul Complete + Tweet Drafts Module Complete + Activity Presets Complete + Goal Progress & Cascades Complete + Multi-Task Time Slots Complete
 
 **Related Documentation:**
 - [MVP Checklist](./mvp-checklist.md) - Implementation progress
@@ -438,7 +438,8 @@ export function TaskCard({ task, onEdit }: TaskCardProps) {
 | **Atomic goal increments** | incrementValue in PATCH | Safe concurrent progress updates, auto-complete/reopen |
 | **Library-goal linking** | goalId on LibraryItem | Library items auto-increment/decrement linked goal progress |
 | **Goal perspective views** | Month/Week/Day | Goals page groups by primary/secondary based on perspective |
+| **Multi-task slots** | No unique constraint | Multiple tasks per slot for parallel work tracking, compact UI |
 
 ---
 
-_Last updated: January 2026 (v0.8.0 — Goal Progress & Cascades)_
+_Last updated: January 2026 (v0.9.0 — Multi-Task Time Slots)_

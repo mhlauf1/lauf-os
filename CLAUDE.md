@@ -408,6 +408,14 @@ Clients have a health score (GREEN/YELLOW/RED) based on:
 - [x] React Query hooks: `useIncrementGoal`, `useDeleteGoal`, `GoalWithCounts` type
 - [x] Library mutations invalidate goals cache
 
+**Multi-Task Time Slots** (Complete)
+- [x] Removed `@@unique([userId, scheduledDate, slotIndex])` constraint from Task model
+- [x] Removed slot conflict validation from POST `/api/tasks`
+- [x] Removed slot conflict validation from PATCH `/api/tasks/[id]`
+- [x] `DailyTimeline` supports multiple tasks per slot (`Map<number, Task[]>`)
+- [x] `TimeSlotRow` renders tasks as horizontal flex row with compact "+" button
+- [x] `TimeBlock` added `compact` prop for horizontal label style
+
 **Next Up:**
 - [ ] Database migration (waiting for credentials)
 - [ ] Intel Feed + AI Hub (Phase 3)
