@@ -13,6 +13,33 @@ _Next: Database migration, X/Twitter API integration, Intel Feed + AI Hub (Phase
 
 ---
 
+## [0.7.0] - 2026-01-27
+
+### Changed
+
+**Activity Presets — Replace User-Created Catalog with 19 Fixed Presets**
+
+Replaced the user-created Activity Catalog with exactly 19 predefined activity "buckets." Each preset is a reusable label (e.g., "Website Design") — when the user picks one, they enter a description and choose a duration.
+
+- Created `src/config/activity-presets.ts` with 19 presets (source of truth): Morning Routine, Website Design, Website Development, Playbook Work, Meal Time, Break Time, Learning, Fitness, Wellness, Engineering, Mobile App Design, Mobile App Development, Lauf Admin Work, Lauf Client Work, Read, Graphic Design, Social Media Management, Generic Work, Night Routine
+- `GET /api/activities` now auto-syncs presets: creates missing, reactivates matching, deactivates non-preset custom activities
+- `POST /api/activities` returns 403 — presets are system-managed
+- `PATCH /api/activities/[id]` restricted to `timesUsed`/`lastUsed` updates only
+- `DELETE /api/activities/[id]` returns 403 — presets cannot be deleted
+- `use-activities.ts` reduced to read-only `useActivities()` hook (removed create/update/delete mutations)
+- `ActivityCatalog` component simplified: removed "New Activity" button, edit/delete dropdown menus
+- `CommandSidebar` simplified: removed `onCreateActivity`, `onEditActivity`, `onDeleteActivity` props
+- `TaskForm` description-first UX: activity-based tasks show description textarea with "What will you do in this block?" placeholder, hide title input (shown in dialog header), hide category picker (auto-set from preset)
+- Deleted `ActivityForm.tsx` component (no longer needed)
+- Removed `ActivityForm` export from `src/components/modules/command/index.ts`
+
+**TimeBlock Category Colors**
+
+- TimeBlock component now displays category-colored left border (matches calendar view styling)
+- Uses `getCategoryConfig()` to resolve color from task category
+
+---
+
 ## [0.6.0] - 2026-01-27
 
 ### Added
@@ -322,6 +349,7 @@ This release pivots LAUF OS from a content-creation tool to a full **Personal Op
 
 | Version | Date | Summary |
 |---------|------|---------|
+| 0.7.0 | 2026-01-27 | Activity Presets (19 fixed presets replacing user-created catalog), TimeBlock category colors |
 | 0.6.0 | 2026-01-27 | Tweet Drafts module (Social Manager), TaskBacklog, calendar redesign, new UI components |
 | 0.5.0 | 2026-01-27 | Creative Library module + Day Builder UX Overhaul (drag-and-drop, CommandSidebar, TaskForm tabs) |
 | 0.4.0 | 2026-01-27 | Critical fixes + modular hardening (toasts, delete confirmations, cache fixes) |
@@ -335,12 +363,12 @@ This release pivots LAUF OS from a content-creation tool to a full **Personal Op
 
 ## Upcoming Versions
 
-### 0.7.0 - Intel Feed & AI Hub
+### 0.8.0 - Intel Feed & AI Hub
 - RSS feeds
 - Article summaries
 - AI tool tracking
 
-### 0.8.0 - Social Publishing
+### 0.9.0 - Social Publishing
 - X/Twitter API integration
 - Tweet scheduling
 - Analytics dashboard

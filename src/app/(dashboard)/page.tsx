@@ -1,18 +1,10 @@
 'use client'
 
-import { useState, useCallback } from 'react'
-import { format } from 'date-fns'
-import {
-  DndContext,
-  DragOverlay,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  type DragStartEvent,
-  type DragEndEvent,
-} from '@dnd-kit/core'
-import { Plus, Target } from 'lucide-react'
+import { useState } from 'react'
+import { format, addDays, isSameDay, startOfWeek } from 'date-fns'
+import { Plus, Target, Newspaper, ChevronLeft, ChevronRight } from 'lucide-react'
 import { toast } from 'sonner'
+import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -26,31 +18,37 @@ import {
 } from '@/components/ui/dialog'
 import {
   DailyTimeline,
-  CommandSidebar,
   TaskForm,
-  ActivityForm,
-  ActivityCardInner,
-  TaskBacklogCardInner,
   GoalsPanelContent,
 } from '@/components/modules/command'
+import { ConfirmDeleteDialog } from '@/components/shared/ConfirmDeleteDialog'
 import { useTasks, useCreateTask, useUpdateTask, useDeleteTask } from '@/hooks/use-tasks'
-import { useActivities, useCreateActivity, useUpdateActivity, useDeleteActivity } from '@/hooks/use-activities'
+import { useActivities } from '@/hooks/use-activities'
 import { useGoals, useCreateGoal, useUpdateGoal } from '@/hooks/use-goals'
-import type { Activity, Task, GoalType } from '@prisma/client'
+import type { Task, GoalType } from '@prisma/client'
 import type { TaskFormData } from '@/components/modules/command/TaskForm'
 
-const DEFAULT_SLOTS = [
-  '06:30', '07:30', '09:00', '10:30',
-  '12:00', '13:30', '15:00', '16:30',
-  '18:00', '19:30', '21:00',
-]
+// Parse a DB date (Prisma @db.Date returns "2026-01-27T00:00:00.000Z")
+// as a local calendar date, stripping the UTC timezone to avoid off-by-one.
+function parseCalendarDate(d: string | Date): Date {
+  const s = typeof d === 'string' ? d : d.toISOString()
+  const [datePart] = s.split('T')
+  const [y, m, day] = datePart.split('-').map(Number)
+  return new Date(y, m - 1, day)
+}
 
 export default function DayBuilderPage() {
   const today = new Date()
-  const todayStr = format(today, 'yyyy-MM-dd')
+  const [selectedDate, setSelectedDate] = useState(today)
+  const selectedStr = format(selectedDate, 'yyyy-MM-dd')
+  const isSelectedToday = isSameDay(selectedDate, today)
+
+  // Week days for the day picker
+  const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 })
+  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
 
   // Data queries — fetch ALL incomplete goals, not just monthly
-  const { data: tasks = [], isLoading: tasksLoading } = useTasks({ date: todayStr })
+  const { data: tasks = [], isLoading: tasksLoading } = useTasks({ date: selectedStr })
   const { data: backlogTasks = [] } = useTasks({ scheduled: 'false' })
   const { data: activities = [], isLoading: activitiesLoading } = useActivities()
   const { data: allGoals = [], isLoading: goalsLoading } = useGoals({
@@ -61,58 +59,32 @@ export default function DayBuilderPage() {
   const createTask = useCreateTask()
   const updateTask = useUpdateTask()
   const deleteTask = useDeleteTask()
-  const createActivity = useCreateActivity()
-  const updateActivity = useUpdateActivity()
-  const deleteActivity = useDeleteActivity()
   const createGoal = useCreateGoal()
   const updateGoal = useUpdateGoal()
 
-  // UI state
+  // UI state — create form
   const [taskFormOpen, setTaskFormOpen] = useState(false)
-  const [activityFormOpen, setActivityFormOpen] = useState(false)
-  const [goalFormOpen, setGoalFormOpen] = useState(false)
-  const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null)
-  const [editingActivity, setEditingActivity] = useState<Activity | null>(null)
   const [taskFormInitial, setTaskFormInitial] = useState<Partial<TaskFormData>>({})
+  const [goalFormOpen, setGoalFormOpen] = useState(false)
   const [goalType, setGoalType] = useState<GoalType>('MONTHLY')
-  const [activeActivity, setActiveActivity] = useState<Activity | null>(null)
-  const [activeTask, setActiveTask] = useState<Task | null>(null)
 
-  // Drag-and-drop sensors
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
-  )
+  // UI state — edit form
+  const [editFormOpen, setEditFormOpen] = useState(false)
+  const [editingTask, setEditingTask] = useState<Task | null>(null)
 
-  // Find next available time slot with enough remaining capacity
-  function getNextAvailableSlot(minMinutes = 1): string {
-    return DEFAULT_SLOTS.find((slot) => {
-      const slotTasks = tasks.filter((t) => t.scheduledTime === slot)
-      const used = slotTasks.reduce((sum, t) => sum + (t.timeBlockMinutes || 90), 0)
-      return (90 - used) >= minMinutes
-    }) || '08:00'
-  }
+  // UI state — delete confirmation
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null)
 
-  // Handlers
-  function handleSelectActivity(activity: Activity) {
-    setSelectedActivity(activity)
+  // Handlers — create
+  function handleAddTask() {
     setTaskFormInitial({
-      scheduledDate: todayStr,
-      scheduledTime: getNextAvailableSlot(),
-    })
-    setTaskFormOpen(true)
-  }
-
-  function handleAddTaskAtTime(time: string) {
-    setSelectedActivity(null)
-    setTaskFormInitial({
-      scheduledDate: todayStr,
-      scheduledTime: time,
+      scheduledDate: selectedStr,
     })
     setTaskFormOpen(true)
   }
 
   function handleCreateTask(data: TaskFormData) {
-    // Use UTC midnight so @db.Date stores the correct calendar date
     const scheduledDate = data.scheduledDate
       ? new Date(data.scheduledDate + 'T00:00:00.000Z').toISOString()
       : undefined
@@ -142,16 +114,45 @@ export default function DayBuilderPage() {
     )
   }
 
-  function handleStartTask(id: string) {
+  // Handlers — edit
+  function handleEditTask(task: Task) {
+    setEditingTask(task)
+    setEditFormOpen(true)
+  }
+
+  function handleEditSubmit(data: TaskFormData) {
+    if (!editingTask) return
+
+    const scheduledDate = data.scheduledDate
+      ? new Date(data.scheduledDate + 'T00:00:00.000Z').toISOString()
+      : null
+
     updateTask.mutate(
-      { id, status: 'IN_PROGRESS' },
       {
-        onSuccess: () => toast.success('Task started'),
-        onError: (err) => toast.error(err.message || 'Failed to start task'),
+        id: editingTask.id,
+        title: data.title,
+        description: data.description || null,
+        category: data.category,
+        priority: data.priority,
+        energyLevel: data.energyLevel,
+        timeBlockMinutes: data.timeBlockMinutes,
+        scheduledDate,
+        scheduledTime: data.scheduledTime || null,
+        goalId: data.goalId || null,
+        activityId: data.activityId || null,
+      },
+      {
+        onSuccess: () => {
+          toast.success('Task updated')
+          setEditFormOpen(false)
+          setEditingTask(null)
+        },
+        onError: (err) => toast.error(err.message || 'Failed to update task'),
       }
     )
   }
 
+  // Handlers — status changes
   function handleCompleteTask(id: string) {
     updateTask.mutate(
       { id, status: 'DONE' },
@@ -162,169 +163,69 @@ export default function DayBuilderPage() {
     )
   }
 
-  function handlePauseTask(id: string) {
-    updateTask.mutate(
-      { id, status: 'TODO' },
-      {
-        onSuccess: () => toast.success('Task paused'),
-        onError: (err) => toast.error(err.message || 'Failed to pause task'),
-      }
-    )
+  // Handlers — delete with confirmation
+  function handleDeleteTask(id: string) {
+    setDeletingTaskId(id)
+    setDeleteDialogOpen(true)
   }
 
-  function handleDeleteTask(id: string) {
-    deleteTask.mutate(id, {
-      onSuccess: () => toast.success('Task deleted'),
+  function confirmDelete() {
+    if (!deletingTaskId) return
+    deleteTask.mutate(deletingTaskId, {
+      onSuccess: () => {
+        toast.success('Task deleted')
+        setDeleteDialogOpen(false)
+        setDeletingTaskId(null)
+      },
       onError: (err) => toast.error(err.message || 'Failed to delete task'),
     })
   }
 
-  function handleCreateActivity(data: {
-    title: string
-    description: string
-    category: string
-    defaultDuration: number
-    energyLevel: string
-  }) {
-    if (editingActivity) {
-      updateActivity.mutate(
-        {
-          id: editingActivity.id,
-          title: data.title,
-          description: data.description || undefined,
-          category: data.category as Activity['category'],
-          defaultDuration: data.defaultDuration,
-          energyLevel: data.energyLevel as Activity['energyLevel'],
-        },
-        {
-          onSuccess: () => {
-            toast.success('Activity updated')
-            setActivityFormOpen(false)
-            setEditingActivity(null)
-          },
-          onError: (err) => toast.error(err.message || 'Failed to update activity'),
-        }
-      )
-    } else {
-      createActivity.mutate(
-        {
-          title: data.title,
-          description: data.description || undefined,
-          category: data.category as Activity['category'],
-          defaultDuration: data.defaultDuration,
-          energyLevel: data.energyLevel as Activity['energyLevel'],
-        },
-        {
-          onSuccess: () => {
-            toast.success('Activity created')
-            setActivityFormOpen(false)
-          },
-          onError: (err) => toast.error(err.message || 'Failed to create activity'),
-        }
-      )
-    }
-  }
+  // Handlers — schedule existing backlog task
+  function handleScheduleExistingTask(taskId: string, scheduledDate: string, scheduledTime: string) {
+    const isoDate = scheduledDate
+      ? new Date(scheduledDate + 'T00:00:00.000Z').toISOString()
+      : new Date(selectedStr + 'T00:00:00.000Z').toISOString()
 
-  function handleEditActivity(activity: Activity) {
-    setEditingActivity(activity)
-    setActivityFormOpen(true)
-  }
-
-  function handleDeleteActivity(id: string) {
-    deleteActivity.mutate(id, {
-      onSuccess: () => toast.success('Activity deleted'),
-      onError: (err) => toast.error(err.message || 'Failed to delete activity'),
-    })
+    updateTask.mutate(
+      {
+        id: taskId,
+        scheduledDate: isoDate,
+        scheduledTime: scheduledTime || undefined,
+      },
+      {
+        onSuccess: () => {
+          toast.success('Task scheduled')
+          setTaskFormOpen(false)
+        },
+        onError: (err) => {
+          toast.error(err.message || 'Failed to schedule task')
+        },
+      }
+    )
   }
 
   function handleAddGoal() {
     setGoalFormOpen(true)
   }
 
-  // Drag-and-drop handlers
-  const handleDragStart = useCallback((event: DragStartEvent) => {
-    const data = event.active.data.current
-    if (data?.type === 'activity') {
-      setActiveActivity(data.activity as Activity)
-    } else if (data?.type === 'task') {
-      setActiveTask(data.task as Task)
-    }
-  }, [])
-
-  const handleDragEnd = useCallback(
-    (event: DragEndEvent) => {
-      setActiveActivity(null)
-      setActiveTask(null)
-      const { active, over } = event
-      if (!over) return
-
-      const activeData = active.data.current
-      const overData = over.data.current
-      if (overData?.type !== 'timeline-slot') return
-
-      const time = overData.time as string
-      const maxMinutes = (overData.maxMinutes as number) ?? 90
-      const scheduledDate = new Date(todayStr + 'T00:00:00.000Z').toISOString()
-
-      if (activeData?.type === 'activity') {
-        const activity = activeData.activity as Activity
-        const duration = activity.defaultDuration
-
-        if (duration > maxMinutes) {
-          toast.error(
-            `"${activity.title}" is ${duration}m but only ${maxMinutes}m available in this slot`
-          )
-          return
-        }
-
-        createTask.mutate(
-          {
-            title: activity.title,
-            description: activity.description || undefined,
-            category: activity.category,
-            priority: 'MEDIUM',
-            energyLevel: activity.energyLevel,
-            timeBlockMinutes: duration,
-            scheduledDate,
-            scheduledTime: time,
-            activityId: activity.id,
-          },
-          {
-            onSuccess: () => toast.success(`Added "${activity.title}" at ${time}`),
-            onError: (err) => toast.error(err.message || 'Failed to create task'),
-          }
-        )
-      } else if (activeData?.type === 'task') {
-        const task = activeData.task as Task
-        const duration = task.timeBlockMinutes || 90
-
-        if (duration > maxMinutes) {
-          toast.error(
-            `"${task.title}" is ${duration}m but only ${maxMinutes}m available in this slot`
-          )
-          return
-        }
-
-        updateTask.mutate(
-          {
-            id: task.id,
-            scheduledDate,
-            scheduledTime: time,
-          },
-          {
-            onSuccess: () => toast.success(`Scheduled "${task.title}" at ${time}`),
-            onError: (err) => toast.error(err.message || 'Failed to schedule task'),
-          }
-        )
+  // Build edit form initial data from editing task
+  const editFormInitial: Partial<TaskFormData> | undefined = editingTask
+    ? {
+        title: editingTask.title,
+        description: editingTask.description || '',
+        category: editingTask.category,
+        priority: editingTask.priority,
+        energyLevel: editingTask.energyLevel,
+        timeBlockMinutes: editingTask.timeBlockMinutes || 90,
+        scheduledDate: editingTask.scheduledDate
+          ? format(parseCalendarDate(editingTask.scheduledDate), 'yyyy-MM-dd')
+          : '',
+        scheduledTime: editingTask.scheduledTime || '',
+        activityId: editingTask.activityId || '',
+        goalId: editingTask.goalId || '',
       }
-    },
-    [todayStr, createTask, updateTask]
-  )
-
-  const handleDragCancel = useCallback(() => {
-    setActiveActivity(null)
-    setActiveTask(null)
-  }, [])
+    : undefined
 
   const isLoading = tasksLoading || activitiesLoading || goalsLoading
 
@@ -335,143 +236,181 @@ export default function DayBuilderPage() {
         <div>
           <h1 className="text-2xl font-semibold">Command Center</h1>
           <p className="text-sm text-text-secondary">
-            {format(today, 'EEEE, MMMM d, yyyy')}
+            {format(selectedDate, 'EEEE, MMMM d, yyyy')}
           </p>
         </div>
-        <Button
-          onClick={() => {
-            setSelectedActivity(null)
-            setTaskFormInitial({
-              scheduledDate: todayStr,
-              scheduledTime: getNextAvailableSlot(),
-            })
-            setTaskFormOpen(true)
-          }}
-        >
+        <Button onClick={handleAddTask}>
           <Plus className="mr-2 h-4 w-4" />
           New Block
         </Button>
       </div>
 
-      {/* Main Content: Timeline (left) + Goals / Activities (right) */}
-      <DndContext
-        sensors={sensors}
-        onDragStart={handleDragStart}
-        onDragEnd={handleDragEnd}
-        onDragCancel={handleDragCancel}
-      >
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-          {/* Daily Timeline — full height left column */}
-          <div className="lg:col-span-2">
-            {isLoading ? (
-              <Card>
-                <CardContent className="py-12">
-                  <p className="text-center text-sm text-text-tertiary">
-                    Loading your day...
-                  </p>
-                </CardContent>
-              </Card>
-            ) : (
-              <DailyTimeline
-                date={today}
-                tasks={tasks}
-                onAddTask={handleAddTaskAtTime}
-                onDeleteTask={handleDeleteTask}
-                onStartTask={handleStartTask}
-                onCompleteTask={handleCompleteTask}
-                onPauseTask={handlePauseTask}
-              />
-            )}
-          </div>
+      {/* Day picker */}
+      <div className="flex items-center gap-2">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 shrink-0"
+          onClick={() => setSelectedDate((d) => addDays(d, -7))}
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+        <div className="flex flex-1 gap-1">
+          {weekDays.map((day) => {
+            const isSelected = isSameDay(day, selectedDate)
+            const isToday = isSameDay(day, today)
+            return (
+              <button
+                key={day.toISOString()}
+                onClick={() => setSelectedDate(day)}
+                className={cn(
+                  'flex flex-1 flex-col items-center rounded-lg py-1.5 transition-colors',
+                  isSelected
+                    ? 'bg-accent/10 text-accent'
+                    : 'text-text-secondary hover:bg-surface-elevated hover:text-text-primary',
+                )}
+              >
+                <span className="text-[10px] uppercase tracking-wide">
+                  {format(day, 'EEE')}
+                </span>
+                <span
+                  className={cn(
+                    'text-sm',
+                    isSelected ? 'font-semibold' : isToday ? 'font-bold' : 'font-medium',
+                  )}
+                >
+                  {format(day, 'd')}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 shrink-0"
+          onClick={() => setSelectedDate((d) => addDays(d, 7))}
+        >
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+      </div>
 
-          {/* Right column: Goals (top) + Activities/Backlog (bottom) */}
-          <div className="space-y-6">
-            {/* Goals Card */}
+      {/* Main Content: Timeline (left) + Goals & Intel Feed (right) */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        {/* Daily Timeline */}
+        <div>
+          {isLoading ? (
             <Card>
-              <CardHeader className="pb-2">
-                <div className="flex items-center gap-2">
-                  <Target className="h-4 w-4 text-text-tertiary" />
-                  <CardTitle className="text-base">Goals</CardTitle>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <GoalsPanelContent
-                  goals={allGoals}
-                  activeType={goalType}
-                  onTypeChange={setGoalType}
-                  onAddGoal={handleAddGoal}
-                  onToggleComplete={(id, completed) => {
-                    updateGoal.mutate(
-                      {
-                        id,
-                        completedAt: completed ? new Date().toISOString() : null,
-                      },
-                      {
-                        onSuccess: () =>
-                          toast.success(completed ? 'Goal completed' : 'Goal reopened'),
-                        onError: (err) =>
-                          toast.error(err.message || 'Failed to update goal'),
-                      }
-                    )
-                  }}
-                />
+              <CardContent className="py-12">
+                <p className="text-center text-sm text-text-tertiary">
+                  Loading your day...
+                </p>
               </CardContent>
             </Card>
-
-            {/* Activities / Backlog Sidebar */}
-            <CommandSidebar
-              activities={activities}
-              onSelectActivity={handleSelectActivity}
-              onCreateActivity={() => {
-                setEditingActivity(null)
-                setActivityFormOpen(true)
-              }}
-              onEditActivity={handleEditActivity}
-              onDeleteActivity={handleDeleteActivity}
-              backlogTasks={backlogTasks}
+          ) : (
+            <DailyTimeline
+              date={selectedDate}
+              tasks={tasks}
+              onAddTask={handleAddTask}
+              onEditTask={handleEditTask}
+              onDeleteTask={handleDeleteTask}
+              onCompleteTask={handleCompleteTask}
             />
-          </div>
+          )}
         </div>
 
-        {/* Drag Overlay — floating card while dragging */}
-        <DragOverlay>
-          {activeActivity ? (
-            <div className="w-56 opacity-90">
-              <ActivityCardInner
-                activity={activeActivity}
-                onSelect={() => {}}
-                onEdit={() => {}}
-                onDelete={() => {}}
+        {/* Right column: Goals + Intel Feed */}
+        <div className="space-y-6">
+          {/* Goals Card */}
+          <Card>
+            <CardHeader className="pb-2">
+              <div className="flex items-center gap-2">
+                <Target className="h-4 w-4 text-text-tertiary" />
+                <CardTitle className="text-base">Goals</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <GoalsPanelContent
+                goals={allGoals}
+                activeType={goalType}
+                onTypeChange={setGoalType}
+                onAddGoal={handleAddGoal}
+                onToggleComplete={(id, completed) => {
+                  updateGoal.mutate(
+                    {
+                      id,
+                      completedAt: completed ? new Date().toISOString() : null,
+                    },
+                    {
+                      onSuccess: () =>
+                        toast.success(completed ? 'Goal completed' : 'Goal reopened'),
+                      onError: (err) =>
+                        toast.error(err.message || 'Failed to update goal'),
+                    }
+                  )
+                }}
               />
-            </div>
-          ) : activeTask ? (
-            <div className="w-56 opacity-90">
-              <TaskBacklogCardInner task={activeTask} />
-            </div>
-          ) : null}
-        </DragOverlay>
-      </DndContext>
+            </CardContent>
+          </Card>
 
-      {/* Task Form Dialog */}
+          {/* Intel Feed — placeholder for curated news, alerts, notifications */}
+          <Card>
+            <CardHeader className="pb-2">
+              <div className="flex items-center gap-2">
+                <Newspaper className="h-4 w-4 text-text-tertiary" />
+                <CardTitle className="text-base">Intel Feed</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <Newspaper className="h-8 w-8 text-text-tertiary/50 mb-3" />
+                <p className="text-sm text-text-secondary font-medium">
+                  Coming Soon
+                </p>
+                <p className="text-xs text-text-tertiary mt-1 max-w-[240px]">
+                  Curated news, email alerts, and notifications will appear here.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* Create Task Form Dialog */}
       <TaskForm
         open={taskFormOpen}
         onOpenChange={setTaskFormOpen}
         onSubmit={handleCreateTask}
         initialData={taskFormInitial}
-        fromActivity={selectedActivity}
         goals={allGoals}
         activities={activities}
+        backlogTasks={backlogTasks}
+        onScheduleExistingTask={handleScheduleExistingTask}
       />
 
-      {/* Activity Form Dialog */}
-      <ActivityForm
-        open={activityFormOpen}
-        onOpenChange={(open) => {
-          setActivityFormOpen(open)
-          if (!open) setEditingActivity(null)
-        }}
-        onSubmit={handleCreateActivity}
-        editingActivity={editingActivity}
+      {/* Edit Task Form Dialog */}
+      {editingTask && (
+        <TaskForm
+          open={editFormOpen}
+          onOpenChange={(open) => {
+            setEditFormOpen(open)
+            if (!open) setEditingTask(null)
+          }}
+          onSubmit={handleEditSubmit}
+          initialData={editFormInitial}
+          isEditing
+          goals={allGoals}
+        />
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDeleteDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={confirmDelete}
+        title="Delete task?"
+        description="This will permanently delete this task. This action cannot be undone."
+        isPending={deleteTask.isPending}
       />
 
       {/* Goal Form Dialog */}

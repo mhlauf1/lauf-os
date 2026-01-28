@@ -3,29 +3,10 @@ import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { createServerClient } from '@/lib/supabase/server'
 
+// Only allow updating usage stats — presets are system-managed
 const updateActivitySchema = z.object({
-  title: z.string().min(1).max(200).optional(),
-  description: z.string().max(1000).optional().nullable(),
-  category: z
-    .enum([
-      'DESIGN',
-      'CODE',
-      'CLIENT',
-      'LEARNING',
-      'FITNESS',
-      'ADMIN',
-      'SAAS',
-      'NETWORKING',
-      'PERSONAL',
-      'LEISURE',
-      'ROUTINE',
-    ])
-    .optional(),
-  defaultDuration: z.number().int().min(15).max(480).optional(),
-  energyLevel: z.enum(['DEEP_WORK', 'MODERATE', 'LIGHT']).optional(),
-  icon: z.string().max(50).optional().nullable(),
-  isActive: z.boolean().optional(),
-  sortOrder: z.number().int().optional(),
+  timesUsed: z.number().int().min(0).optional(),
+  lastUsed: z.string().datetime().optional().nullable(),
 })
 
 export async function PATCH(
@@ -78,36 +59,10 @@ export async function PATCH(
 
 export async function DELETE(
   _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params: _params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    const supabase = await createServerClient()
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const { id } = await params
-
-    const existing = await prisma.activity.findFirst({
-      where: { id, userId: user.id },
-    })
-
-    if (!existing) {
-      return NextResponse.json({ error: 'Activity not found' }, { status: 404 })
-    }
-
-    await prisma.activity.delete({ where: { id } })
-
-    return NextResponse.json({ data: { deleted: true } })
-  } catch (error) {
-    console.error('Error deleting activity:', error)
-    return NextResponse.json(
-      { error: 'Failed to delete activity' },
-      { status: 500 }
-    )
-  }
+  return NextResponse.json(
+    { error: 'Activity presets are system-managed and cannot be deleted' },
+    { status: 403 }
+  )
 }

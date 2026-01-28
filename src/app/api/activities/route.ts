@@ -1,30 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { z } from 'zod'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { createServerClient } from '@/lib/supabase/server'
 import { ensureUser } from '@/lib/prisma/ensure-user'
-
-const createActivitySchema = z.object({
-  title: z.string().min(1).max(200),
-  description: z.string().max(1000).optional(),
-  category: z.enum([
-    'DESIGN',
-    'CODE',
-    'CLIENT',
-    'LEARNING',
-    'FITNESS',
-    'ADMIN',
-    'SAAS',
-    'NETWORKING',
-    'PERSONAL',
-    'LEISURE',
-    'ROUTINE',
-  ]),
-  defaultDuration: z.number().int().min(15).max(480).optional(),
-  energyLevel: z.enum(['DEEP_WORK', 'MODERATE', 'LIGHT']).optional(),
-  icon: z.string().max(50).optional(),
-  sortOrder: z.number().int().optional(),
-})
+import { ACTIVITY_PRESETS, PRESET_TITLES } from '@/config/activity-presets'
 
 export async function GET() {
   try {
@@ -37,6 +15,76 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    await ensureUser(user)
+
+    // Fetch ALL user activities (including inactive) for sync comparison
+    const allActivities = await prisma.activity.findMany({
+      where: { userId: user.id },
+    })
+
+    const titleMap = new Map(
+      allActivities.map((a) => [a.title.toLowerCase(), a])
+    )
+
+    const toCreate: typeof ACTIVITY_PRESETS = []
+    const toReactivate: { id: string; sortOrder: number }[] = []
+
+    for (const preset of ACTIVITY_PRESETS) {
+      const existing = titleMap.get(preset.title.toLowerCase())
+      if (!existing) {
+        toCreate.push(preset)
+      } else if (!existing.isActive) {
+        // Reactivate preset that was previously deactivated
+        toReactivate.push({ id: existing.id, sortOrder: preset.sortOrder })
+      }
+    }
+
+    // Deactivate custom activities not in preset list
+    const toDeactivate = allActivities.filter(
+      (a) => a.isActive && !PRESET_TITLES.has(a.title.toLowerCase())
+    )
+
+    // Batch operations
+    const ops: Promise<unknown>[] = []
+
+    if (toCreate.length > 0) {
+      ops.push(
+        prisma.activity.createMany({
+          data: toCreate.map((p) => ({
+            userId: user.id,
+            title: p.title,
+            category: p.category,
+            defaultDuration: p.defaultDuration,
+            energyLevel: p.energyLevel,
+            sortOrder: p.sortOrder,
+          })),
+        })
+      )
+    }
+
+    for (const item of toReactivate) {
+      ops.push(
+        prisma.activity.update({
+          where: { id: item.id },
+          data: { isActive: true, sortOrder: item.sortOrder },
+        })
+      )
+    }
+
+    for (const item of toDeactivate) {
+      ops.push(
+        prisma.activity.update({
+          where: { id: item.id },
+          data: { isActive: false },
+        })
+      )
+    }
+
+    if (ops.length > 0) {
+      await Promise.all(ops)
+    }
+
+    // Return active activities ordered by sortOrder
     const activities = await prisma.activity.findMany({
       where: {
         userId: user.id,
@@ -55,47 +103,9 @@ export async function GET() {
   }
 }
 
-export async function POST(request: NextRequest) {
-  try {
-    const supabase = await createServerClient()
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    await ensureUser(user)
-
-    const body = await request.json()
-    const validatedData = createActivitySchema.parse(body)
-
-    const activity = await prisma.activity.create({
-      data: {
-        userId: user.id,
-        title: validatedData.title,
-        description: validatedData.description,
-        category: validatedData.category,
-        defaultDuration: validatedData.defaultDuration ?? 90,
-        energyLevel: validatedData.energyLevel ?? 'MODERATE',
-        icon: validatedData.icon,
-        sortOrder: validatedData.sortOrder ?? 0,
-      },
-    })
-
-    return NextResponse.json({ data: activity }, { status: 201 })
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: 'Validation error', details: error.errors },
-        { status: 400 }
-      )
-    }
-    console.error('Error creating activity:', error)
-    return NextResponse.json(
-      { error: 'Failed to create activity' },
-      { status: 500 }
-    )
-  }
+export async function POST() {
+  return NextResponse.json(
+    { error: 'Activity presets are system-managed and cannot be created manually' },
+    { status: 403 }
+  )
 }

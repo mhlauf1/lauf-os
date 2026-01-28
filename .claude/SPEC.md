@@ -609,7 +609,7 @@ enum TweetDraftStatus {
 - `TaskCard` - Task in queue with category badge, priority, energy level
 - `TaskForm` - Create/edit task with "from activity" mode, "From Catalog" / "Manual" tabs, goal linking
 - `ActivityCatalog` - Activity picker grid with draggable cards (`useDraggable`)
-- `ActivityForm` - Create/edit activity dialog
+- ~~`ActivityForm`~~ - Removed (activities are now fixed presets, not user-editable)
 - `CommandSidebar` - Tabbed sidebar (Goals / Activities tabs) for Day Builder
 - `GoalsPanel` - Goals sidebar with progress tracking + clickable completion toggle
 - `GoalFormDialog` - Create goals of any type (Daily/Weekly/Monthly/Yearly) with type picker
@@ -1372,7 +1372,7 @@ See `/prisma/schema.prisma` for full schema with all models:
 ### Command Center
 
 - DailyTimeline (with droppable EmptySlot), TimeBlock, TaskCard, TaskForm (with catalog picker)
-- ActivityCatalog (with draggable cards), ActivityForm, CommandSidebar
+- ActivityCatalog (read-only, draggable preset cards), CommandSidebar
 - GoalsPanel (with GoalsPanelContent), GoalFormDialog
 - TaskBacklog (draggable unscheduled tasks)
 - CalendarPage (continuous timeline), PrepMode (planned)

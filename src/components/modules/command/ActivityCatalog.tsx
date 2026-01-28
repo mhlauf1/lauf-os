@@ -1,27 +1,17 @@
 'use client'
 
-import { Plus, Zap, Clock, MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
+import { Zap, Clock } from 'lucide-react'
 import { useDraggable } from '@dnd-kit/core'
 import { CSS } from '@dnd-kit/utilities'
 import { cn } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import { getCategoryConfig } from '@/config/categories'
 import type { Activity } from '@prisma/client'
 
 interface ActivityCatalogProps {
   activities: Activity[]
   onSelectActivity: (activity: Activity) => void
-  onCreateActivity: () => void
-  onEditActivity: (activity: Activity) => void
-  onDeleteActivity: (id: string) => void
 }
 
 interface ActivityCatalogContentProps extends ActivityCatalogProps {
@@ -37,36 +27,15 @@ const energyLabels: Record<string, string> = {
 export function ActivityCatalogContent({
   activities,
   onSelectActivity,
-  onCreateActivity,
-  onEditActivity,
-  onDeleteActivity,
   compact = false,
 }: ActivityCatalogContentProps) {
   return (
     <div>
-      {/* New Activity button */}
-      <div className="flex justify-end mb-3">
-        <Button variant="ghost" size="sm" onClick={onCreateActivity}>
-          <Plus className="mr-1 h-4 w-4" />
-          New Activity
-        </Button>
-      </div>
-
       {activities.length === 0 ? (
         <div className="py-8 text-center">
           <p className="text-sm text-text-tertiary">
-            No activities yet. Create your first activity to start building
-            your day.
+            Loading activity presets...
           </p>
-          <Button
-            variant="outline"
-            size="sm"
-            className="mt-3"
-            onClick={onCreateActivity}
-          >
-            <Plus className="mr-1 h-4 w-4" />
-            Create Activity
-          </Button>
         </div>
       ) : (
         <div className={cn(
@@ -80,8 +49,6 @@ export function ActivityCatalogContent({
               key={activity.id}
               activity={activity}
               onSelect={() => onSelectActivity(activity)}
-              onEdit={() => onEditActivity(activity)}
-              onDelete={() => onDeleteActivity(activity.id)}
             />
           ))}
         </div>
@@ -93,9 +60,6 @@ export function ActivityCatalogContent({
 export function ActivityCatalog({
   activities,
   onSelectActivity,
-  onCreateActivity,
-  onEditActivity,
-  onDeleteActivity,
 }: ActivityCatalogProps) {
   return (
     <Card>
@@ -114,9 +78,6 @@ export function ActivityCatalog({
         <ActivityCatalogContent
           activities={activities}
           onSelectActivity={onSelectActivity}
-          onCreateActivity={onCreateActivity}
-          onEditActivity={onEditActivity}
-          onDeleteActivity={onDeleteActivity}
         />
       </CardContent>
     </Card>
@@ -126,11 +87,9 @@ export function ActivityCatalog({
 interface ActivityCardProps {
   activity: Activity
   onSelect: () => void
-  onEdit: () => void
-  onDelete: () => void
 }
 
-function DraggableActivityCard({ activity, onSelect, onEdit, onDelete }: ActivityCardProps) {
+function DraggableActivityCard({ activity, onSelect }: ActivityCardProps) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: `activity-${activity.id}`,
     data: { type: 'activity', activity },
@@ -145,8 +104,6 @@ function DraggableActivityCard({ activity, onSelect, onEdit, onDelete }: Activit
       <ActivityCardInner
         activity={activity}
         onSelect={onSelect}
-        onEdit={onEdit}
-        onDelete={onDelete}
         isDragging={isDragging}
       />
     </div>
@@ -156,8 +113,6 @@ function DraggableActivityCard({ activity, onSelect, onEdit, onDelete }: Activit
 export function ActivityCardInner({
   activity,
   onSelect,
-  onEdit,
-  onDelete,
   isDragging = false,
 }: ActivityCardProps & { isDragging?: boolean }) {
   const categoryConfig = getCategoryConfig(activity.category)
@@ -173,46 +128,9 @@ export function ActivityCardInner({
       )}
       style={{ borderLeftColor: categoryConfig.color }}
     >
-      {/* Menu */}
-      <div className="absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <MoreHorizontal className="h-3.5 w-3.5" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem
-              onClick={(e) => {
-                e.stopPropagation()
-                onEdit()
-              }}
-            >
-              <Pencil className="mr-2 h-3.5 w-3.5" />
-              Edit
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              className="text-red-400"
-              onClick={(e) => {
-                e.stopPropagation()
-                onDelete()
-              }}
-            >
-              <Trash2 className="mr-2 h-3.5 w-3.5" />
-              Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-
       {/* Content */}
       <div className="space-y-2">
-        <p className="font-medium text-sm pr-6">{activity.title}</p>
+        <p className="font-medium text-sm">{activity.title}</p>
 
         <div className="flex flex-wrap items-center gap-1.5">
           <Badge

@@ -84,7 +84,7 @@ The MVP focuses on two core modules:
 - [x] Create React Query hooks (`use-tasks`, `use-activities`, `use-goals`)
 - [x] Wire QueryClientProvider into root layout
 - [x] Build `ActivityCatalog` component (activity picker grid)
-- [x] Build `ActivityForm` component (create/edit activity dialog)
+- [x] ~~Build `ActivityForm` component~~ (removed — activities are now fixed presets)
 - [x] Update `TaskForm` with "from activity" quick-create mode + goal linking
 - [x] Build Day Builder dashboard (timeline + goals panel + catalog)
 - [x] Auto-increment goal progress on task completion
@@ -245,7 +245,34 @@ The MVP focuses on two core modules:
 
 ---
 
-## Phase 3.5: Integration & Polish
+## Phase 3.5: Activity Presets + UX Refinements (Complete)
+
+**Goal**: Replace user-created Activity Catalog with 19 fixed presets, streamline UX
+
+### Activity Presets
+- [x] Define 19 presets in `src/config/activity-presets.ts` (source of truth)
+- [x] Auto-sync presets on `GET /api/activities` (create missing, deactivate custom, reactivate matching)
+- [x] Lock `POST /api/activities` (403 — system-managed)
+- [x] Restrict `PATCH /api/activities/[id]` to `timesUsed`/`lastUsed` only
+- [x] Lock `DELETE /api/activities/[id]` (403 — system-managed)
+- [x] Remove mutation hooks from `use-activities.ts` (read-only `useActivities` only)
+- [x] Remove create/edit/delete UI from `ActivityCatalog` component
+- [x] Simplify `CommandSidebar` props (remove activity CRUD callbacks)
+- [x] Delete `ActivityForm.tsx` component
+- [x] Remove `ActivityForm` export from index.ts
+
+### TaskForm Description-First UX
+- [x] Activity-based tasks show description textarea ("What will you do in this block?")
+- [x] Hide title input for activity tasks (shown in dialog header as preset title)
+- [x] Hide category picker for activity tasks (auto-set from preset)
+- [x] Keep duration selector (editable, pre-filled with preset default)
+
+### TimeBlock Category Colors
+- [x] TimeBlock component shows category-colored left border (matches calendar view)
+
+---
+
+## Phase 4: Integration & Polish
 
 **Goal**: Connect modules and add finishing touches
 
@@ -293,7 +320,8 @@ When complete, the app should:
 | Phase 2.5: Creative Library | Complete | 2026-01-27 | 2026-01-27 |
 | Day Builder UX Overhaul | Complete | 2026-01-27 | 2026-01-27 |
 | Phase 3: Tweet Drafts | Complete | 2026-01-27 | 2026-01-27 |
-| Phase 3.5: Integration | In Progress | 2026-01-27 | - |
+| Phase 3.5: Activity Presets | Complete | 2026-01-27 | 2026-01-27 |
+| Phase 4: Integration | In Progress | 2026-01-27 | - |
 
 ---
 
@@ -306,6 +334,7 @@ When complete, the app should:
 - **2026-01-27**: Creative Library module complete. Full CRUD, search, type filtering, detail views with type-specific fields. Navigation updated.
 - **2026-01-27**: Day Builder UX Overhaul complete. `@dnd-kit/core` drag-and-drop from Activity Catalog to timeline slots, CommandSidebar with Goals/Activities tabs, TaskForm two-tab mode ("From Catalog" / "Manual"), timezone fix for Prisma `@db.Date` fields.
 - **2026-01-27**: Tweet Drafts module complete. TweetDraft model, full CRUD API with filters, React Query hooks, TweetDraftCard/Form/Grid components, social list + detail pages, navigation updated. Also added TaskBacklog component and redesigned calendar page with continuous timeline.
+- **2026-01-27**: Activity Presets complete. Replaced user-created Activity Catalog with 19 fixed presets. Config-driven with auto-sync on GET. Locked mutations. Simplified UX: description-first TaskForm, read-only catalog, category-colored TimeBlock borders.
 - Focus on functionality over polish in MVP
 - Document any blockers or decisions made
 

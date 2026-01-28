@@ -1,80 +1,73 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { format, startOfWeek, addDays, isSameDay } from "date-fns";
-import { ChevronLeft, ChevronRight, Plus, Loader2 } from "lucide-react";
+import { format, startOfWeek, addDays, isSameDay, isSameWeek } from "date-fns";
+import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { TaskForm } from "@/components/modules/command/TaskForm";
-import { useTasks, useCreateTask } from "@/hooks/use-tasks";
+import { DayColumn } from "@/components/modules/command/DayColumn";
+import { ConfirmDeleteDialog } from "@/components/shared/ConfirmDeleteDialog";
+import {
+  useTasks,
+  useCreateTask,
+  useUpdateTask,
+  useDeleteTask,
+} from "@/hooks/use-tasks";
+import { useActivities } from "@/hooks/use-activities";
 import { useGoals } from "@/hooks/use-goals";
-import { cn } from "@/lib/utils";
-import { getCategoryConfig } from "@/config/categories";
-import type { Task, TaskCategory } from "@prisma/client";
+import type { Task } from "@prisma/client";
 import type { TaskFormData } from "@/components/modules/command/TaskForm";
 
-const DAY_START_HOUR = 6;
-const DAY_END_HOUR = 23;
-const TOTAL_HOURS = DAY_END_HOUR - DAY_START_HOUR; // 17
-const HOUR_HEIGHT_PX = 60;
-const TOP_OFFSET_PX = 30; // half-hour buffer so 6 AM label isn't clipped
-
-const hours = Array.from(
-  { length: TOTAL_HOURS + 1 },
-  (_, i) => DAY_START_HOUR + i,
-);
-
-function timeToOffset(time: string): number {
-  const [h, m] = time.split(":").map(Number);
-  const minutesFromStart = (h - DAY_START_HOUR) * 60 + m;
-  return (minutesFromStart / 60) * HOUR_HEIGHT_PX + TOP_OFFSET_PX;
-}
-
-function durationToHeight(minutes: number): number {
-  return (minutes / 60) * HOUR_HEIGHT_PX;
-}
-
-function formatHourLabel(hour: number): string {
-  const period = hour >= 12 ? "PM" : "AM";
-  const h12 = hour % 12 || 12;
-  return `${h12} ${period}`;
+// Parse a DB date (Prisma @db.Date returns "2026-01-27T00:00:00.000Z")
+// as a local calendar date, stripping the UTC timezone to avoid off-by-one.
+function parseCalendarDate(d: string | Date): Date {
+  const s = typeof d === "string" ? d : d.toISOString();
+  const [datePart] = s.split("T");
+  const [y, m, day] = datePart.split("-").map(Number);
+  return new Date(y, m - 1, day);
 }
 
 export default function CalendarPage() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
   const weekEnd = addDays(weekStart, 6);
-
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
   const dateFrom = format(weekStart, "yyyy-MM-dd");
   const dateTo = format(weekEnd, "yyyy-MM-dd");
 
+  // Data fetching
   const { data: tasks = [], isLoading } = useTasks({ dateFrom, dateTo });
+  const { data: backlogTasks = [] } = useTasks({ scheduled: "false" });
+  const { data: activities = [] } = useActivities();
   const { data: goals = [] } = useGoals({ completed: "false" });
+
+  // Mutations
   const createTask = useCreateTask();
+  const updateTask = useUpdateTask();
+  const deleteTask = useDeleteTask();
 
-  // Task form state
+  // Create form state
   const [taskFormOpen, setTaskFormOpen] = useState(false);
-  const [taskFormInitial, setTaskFormInitial] = useState<Partial<TaskFormData>>(
-    {},
-  );
+  const [taskFormInitial, setTaskFormInitial] = useState<
+    Partial<TaskFormData>
+  >({});
 
-  // Parse a DB date (Prisma @db.Date returns "2026-01-27T00:00:00.000Z")
-  // as a local calendar date, stripping the UTC timezone to avoid off-by-one.
-  function parseCalendarDate(d: string | Date): Date {
-    const s = typeof d === "string" ? d : d.toISOString();
-    const [datePart] = s.split("T");
-    const [y, m, day] = datePart.split("-").map(Number);
-    return new Date(y, m - 1, day);
-  }
+  // Edit form state
+  const [editFormOpen, setEditFormOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
+
+  // Delete confirmation state
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null);
 
   // Group tasks by day
   const tasksByDay = useMemo(() => {
     const map: Record<string, Task[]> = {};
     for (const task of tasks) {
-      if (task.scheduledDate && task.scheduledTime) {
+      if (task.scheduledDate) {
         const dayKey = format(
           parseCalendarDate(task.scheduledDate),
           "yyyy-MM-dd",
@@ -86,34 +79,34 @@ export default function CalendarPage() {
     return map;
   }, [tasks]);
 
-  // Count tasks per day
-  const taskCountByDay = useMemo(() => {
-    const map: Record<string, number> = {};
-    for (const task of tasks) {
-      if (task.scheduledDate) {
-        const dayKey = format(
-          parseCalendarDate(task.scheduledDate),
-          "yyyy-MM-dd",
-        );
-        map[dayKey] = (map[dayKey] || 0) + 1;
-      }
-    }
-    return map;
-  }, [tasks]);
-
   const navigateWeek = (direction: "prev" | "next") => {
     setCurrentDate((prev) => addDays(prev, direction === "prev" ? -7 : 7));
   };
 
-  function handleAddTaskAtSlot(day: Date, time: string) {
+  // Contextual label for the center nav button
+  const now = new Date();
+  const thisWeekStart = startOfWeek(now, { weekStartsOn: 1 });
+  const nextWeekStart = addDays(thisWeekStart, 7);
+  const isThisWeek = isSameWeek(weekStart, now, { weekStartsOn: 1 });
+  const isNextWeek = isSameWeek(weekStart, nextWeekStart, { weekStartsOn: 1 });
+
+  function getWeekLabel(): string {
+    if (isThisWeek) return "This Week";
+    if (isNextWeek) return "Next Week";
+    const startDay = format(weekStart, "do");
+    const endDay = format(weekEnd, "do");
+    return `${startDay} – ${endDay}`;
+  }
+
+  // Create task flow
+  function handleAddTask(date: Date) {
     setTaskFormInitial({
-      scheduledDate: format(day, "yyyy-MM-dd"),
-      scheduledTime: time,
+      scheduledDate: format(date, "yyyy-MM-dd"),
     });
     setTaskFormOpen(true);
   }
 
-  function handleCreateTask(data: TaskFormData) {
+  function handleCreateSubmit(data: TaskFormData) {
     const scheduledDate = data.scheduledDate
       ? new Date(data.scheduledDate + "T00:00:00.000Z").toISOString()
       : undefined;
@@ -129,6 +122,7 @@ export default function CalendarPage() {
         scheduledDate,
         scheduledTime: data.scheduledTime || undefined,
         goalId: data.goalId || undefined,
+        activityId: data.activityId || undefined,
       },
       {
         onSuccess: () => {
@@ -140,8 +134,126 @@ export default function CalendarPage() {
     );
   }
 
+  // Schedule existing backlog task
+  function handleScheduleExistingTask(
+    taskId: string,
+    scheduledDate: string,
+    scheduledTime: string,
+  ) {
+    const isoDate = scheduledDate
+      ? new Date(scheduledDate + "T00:00:00.000Z").toISOString()
+      : null;
+
+    updateTask.mutate(
+      {
+        id: taskId,
+        scheduledDate: isoDate,
+        scheduledTime: scheduledTime || null,
+      },
+      {
+        onSuccess: () => {
+          toast.success("Task scheduled");
+          setTaskFormOpen(false);
+        },
+        onError: (err) =>
+          toast.error(err.message || "Failed to schedule task"),
+      },
+    );
+  }
+
+  // Edit task flow
+  function handleEditTask(task: Task) {
+    setEditingTask(task);
+    setEditFormOpen(true);
+  }
+
+  function handleEditSubmit(data: TaskFormData) {
+    if (!editingTask) return;
+
+    const scheduledDate = data.scheduledDate
+      ? new Date(data.scheduledDate + "T00:00:00.000Z").toISOString()
+      : null;
+
+    updateTask.mutate(
+      {
+        id: editingTask.id,
+        title: data.title,
+        description: data.description || null,
+        category: data.category,
+        priority: data.priority,
+        energyLevel: data.energyLevel,
+        timeBlockMinutes: data.timeBlockMinutes,
+        scheduledDate,
+        scheduledTime: data.scheduledTime || null,
+        goalId: data.goalId || null,
+        activityId: data.activityId || null,
+      },
+      {
+        onSuccess: () => {
+          toast.success("Task updated");
+          setEditFormOpen(false);
+          setEditingTask(null);
+        },
+        onError: (err) => toast.error(err.message || "Failed to update task"),
+      },
+    );
+  }
+
+  // Complete task
+  function handleCompleteTask(id: string) {
+    const task = tasks.find((t) => t.id === id);
+    const newStatus = task?.status === "DONE" ? "TODO" : "DONE";
+
+    updateTask.mutate(
+      { id, status: newStatus },
+      {
+        onSuccess: () =>
+          toast.success(
+            newStatus === "DONE" ? "Task completed" : "Task reopened",
+          ),
+        onError: (err) => toast.error(err.message || "Failed to update task"),
+      },
+    );
+  }
+
+  // Delete task flow
+  function handleDeleteTask(id: string) {
+    setDeletingTaskId(id);
+    setDeleteDialogOpen(true);
+  }
+
+  function confirmDelete() {
+    if (!deletingTaskId) return;
+    deleteTask.mutate(deletingTaskId, {
+      onSuccess: () => {
+        toast.success("Task deleted");
+        setDeleteDialogOpen(false);
+        setDeletingTaskId(null);
+      },
+      onError: (err) => toast.error(err.message || "Failed to delete task"),
+    });
+  }
+
+  // Build edit form initial data from editing task
+  const editFormInitial: Partial<TaskFormData> | undefined = editingTask
+    ? {
+        title: editingTask.title,
+        description: editingTask.description || "",
+        category: editingTask.category,
+        priority: editingTask.priority,
+        energyLevel: editingTask.energyLevel,
+        timeBlockMinutes: editingTask.timeBlockMinutes || 90,
+        scheduledDate: editingTask.scheduledDate
+          ? format(parseCalendarDate(editingTask.scheduledDate), "yyyy-MM-dd")
+          : "",
+        scheduledTime: editingTask.scheduledTime || "",
+        activityId: editingTask.activityId || "",
+        goalId: editingTask.goalId || "",
+      }
+    : undefined;
+
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col h-full gap-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -159,7 +271,7 @@ export default function CalendarPage() {
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <Button variant="outline" onClick={() => setCurrentDate(new Date())}>
-            Today
+            {getWeekLabel()}
           </Button>
           <Button
             variant="outline"
@@ -184,161 +296,67 @@ export default function CalendarPage() {
           </CardContent>
         </Card>
       ) : (
-        <Card>
-          <CardContent className="p-0">
-            {/* Sticky day headers */}
-            <div
-              className="grid border-b border-border"
-              style={{ gridTemplateColumns: "80px repeat(7, 1fr)" }}
-            >
-              <div className="border-r border-border p-3" />
+        <Card className="overflow-hidden flex-1 flex flex-col">
+          <CardContent className="p-0 flex-1 flex flex-col">
+            <div className="grid grid-cols-7 flex-1">
               {weekDays.map((day) => {
                 const dayKey = format(day, "yyyy-MM-dd");
-                const count = taskCountByDay[dayKey] || 0;
+                const dayTasks = tasksByDay[dayKey] || [];
+                const today = isSameDay(day, new Date());
+
                 return (
-                  <div
-                    key={day.toISOString()}
-                    className={cn(
-                      "border-r border-border p-3 text-center last:border-r-0",
-                      isSameDay(day, new Date()) && "bg-accent/10",
-                    )}
-                  >
-                    <p className="text-xs text-text-secondary">
-                      {format(day, "EEE")}
-                    </p>
-                    <p
-                      className={cn(
-                        "text-lg font-medium",
-                        isSameDay(day, new Date()) && "text-accent",
-                      )}
-                    >
-                      {format(day, "d")}
-                    </p>
-                    {count > 0 && (
-                      <p className="text-xs text-text-tertiary mt-0.5">
-                        {count} task{count !== 1 ? "s" : ""}
-                      </p>
-                    )}
-                  </div>
+                  <DayColumn
+                    key={dayKey}
+                    date={day}
+                    tasks={dayTasks}
+                    isToday={today}
+                    onAddTask={handleAddTask}
+                    onEditTask={handleEditTask}
+                    onDeleteTask={handleDeleteTask}
+                    onCompleteTask={handleCompleteTask}
+                  />
                 );
               })}
-            </div>
-
-            {/* Scrollable timeline body */}
-            <div
-              className="overflow-y-auto"
-              style={{ maxHeight: "calc(100vh - 260px)" }}
-            >
-              <div
-                className="grid"
-                style={{
-                  gridTemplateColumns: "80px repeat(7, 1fr)",
-                  height: TOTAL_HOURS * HOUR_HEIGHT_PX + TOP_OFFSET_PX,
-                }}
-              >
-                {/* Time labels column */}
-                <div className="relative border-r border-border">
-                  {hours.map((hour) => (
-                    <div
-                      key={hour}
-                      className="absolute right-2 text-xs text-text-secondary -translate-y-1/2"
-                      style={{
-                        top: (hour - DAY_START_HOUR) * HOUR_HEIGHT_PX + TOP_OFFSET_PX,
-                      }}
-                    >
-                      {formatHourLabel(hour)}
-                    </div>
-                  ))}
-                </div>
-
-                {/* 7 day columns */}
-                {weekDays.map((day) => {
-                  const dayKey = format(day, "yyyy-MM-dd");
-                  const dayTasks = tasksByDay[dayKey] || [];
-                  const isToday = isSameDay(day, new Date());
-
-                  return (
-                    <div
-                      key={dayKey}
-                      className={cn(
-                        "relative border-r border-border last:border-r-0",
-                        isToday && "bg-accent/5",
-                      )}
-                    >
-                      {/* Hour gridlines */}
-                      {hours.map((hour) => (
-                        <div
-                          key={hour}
-                          className="absolute w-full border-t border-border"
-                          style={{
-                            top: (hour - DAY_START_HOUR) * HOUR_HEIGHT_PX + TOP_OFFSET_PX,
-                          }}
-                        />
-                      ))}
-
-                      {/* Clickable hour zones */}
-                      {hours.slice(0, -1).map((hour) => {
-                        const time = `${hour.toString().padStart(2, "0")}:00`;
-                        return (
-                          <button
-                            key={hour}
-                            onClick={() => handleAddTaskAtSlot(day, time)}
-                            className="absolute w-full opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center text-text-tertiary"
-                            style={{
-                              top: (hour - DAY_START_HOUR) * HOUR_HEIGHT_PX + TOP_OFFSET_PX,
-                              height: HOUR_HEIGHT_PX,
-                            }}
-                          >
-                            <Plus className="h-3 w-3" />
-                          </button>
-                        );
-                      })}
-
-                      {/* Tasks (absolutely positioned) */}
-                      {dayTasks.map((task) => {
-                        const catConfig = getCategoryConfig(
-                          task.category as TaskCategory,
-                        );
-                        const minutes = task.timeBlockMinutes || 90;
-                        return (
-                          <div
-                            key={task.id}
-                            className="absolute left-0.5 right-0.5 z-10 rounded-sm border border-border px-1.5 py-0.5 text-xs overflow-hidden cursor-default"
-                            style={{
-                              top: timeToOffset(task.scheduledTime!),
-                              height: durationToHeight(minutes),
-                              borderLeftWidth: "3px",
-                              borderLeftColor: catConfig.color,
-                              backgroundColor: "var(--surface)",
-                            }}
-                          >
-                            <p className="font-medium truncate leading-tight">
-                              {task.title}
-                            </p>
-                            {minutes >= 45 && (
-                              <p className="text-[10px] text-text-tertiary">
-                                {minutes}m
-                              </p>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  );
-                })}
-              </div>
             </div>
           </CardContent>
         </Card>
       )}
 
-      {/* Task Form Dialog */}
+      {/* Create Task Form */}
       <TaskForm
         open={taskFormOpen}
         onOpenChange={setTaskFormOpen}
-        onSubmit={handleCreateTask}
+        onSubmit={handleCreateSubmit}
         initialData={taskFormInitial}
         goals={goals}
+        activities={activities}
+        backlogTasks={backlogTasks}
+        onScheduleExistingTask={handleScheduleExistingTask}
+      />
+
+      {/* Edit Task Form */}
+      {editingTask && (
+        <TaskForm
+          open={editFormOpen}
+          onOpenChange={(open) => {
+            setEditFormOpen(open);
+            if (!open) setEditingTask(null);
+          }}
+          onSubmit={handleEditSubmit}
+          initialData={editFormInitial}
+          isEditing
+          goals={goals}
+        />
+      )}
+
+      {/* Delete Confirmation */}
+      <ConfirmDeleteDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={confirmDelete}
+        title="Delete task?"
+        description="This will permanently delete this task. This action cannot be undone."
+        isPending={deleteTask.isPending}
       />
     </div>
   );

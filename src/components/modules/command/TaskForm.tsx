@@ -35,7 +35,7 @@ import {
   CommandList,
 } from '@/components/ui/command'
 import { categoryList, getCategoryConfig } from '@/config/categories'
-import type { Priority, EnergyLevel, Activity, Goal } from '@prisma/client'
+import type { Priority, EnergyLevel, Activity, Goal, Task } from '@prisma/client'
 
 export interface TaskFormData {
   title: string
@@ -59,9 +59,11 @@ interface TaskFormProps {
   fromActivity?: Activity | null
   goals?: Goal[]
   activities?: Activity[]
+  backlogTasks?: Task[]
+  onScheduleExistingTask?: (taskId: string, scheduledDate: string, scheduledTime: string) => void
 }
 
-type FormTab = 'catalog' | 'manual'
+type FormTab = 'catalog' | 'manual' | 'tasks'
 
 const timeOptions = [30, 45, 60, 90, 120, 180]
 
@@ -77,7 +79,7 @@ function getDefaultFormData(
   if (fromActivity) {
     return {
       title: fromActivity.title,
-      description: fromActivity.description || '',
+      description: '',
       category: fromActivity.category,
       priority: 'MEDIUM',
       energyLevel: fromActivity.energyLevel,
@@ -112,12 +114,18 @@ export function TaskForm({
   fromActivity,
   goals = [],
   activities = [],
+  backlogTasks = [],
+  onScheduleExistingTask,
 }: TaskFormProps) {
   const formKey = open ? `${fromActivity?.id ?? 'manual'}-${initialData?.scheduledTime ?? ''}` : 'closed'
   const [formData, setFormData] = useState<TaskFormData>(
     getDefaultFormData(initialData, fromActivity)
   )
-  const [formTab, setFormTab] = useState<FormTab>('catalog')
+
+  const hasActivities = activities.length > 0
+  const hasBacklog = backlogTasks.length > 0
+  const defaultTab: FormTab = hasActivities ? 'catalog' : hasBacklog ? 'tasks' : 'manual'
+  const [formTab, setFormTab] = useState<FormTab>(defaultTab)
 
   // Reset form data when dialog opens with different context
   const [lastKey, setLastKey] = useState(formKey)
@@ -125,7 +133,8 @@ export function TaskForm({
     setLastKey(formKey)
     if (open) {
       setFormData(getDefaultFormData(initialData, fromActivity))
-      setFormTab('catalog')
+      const resetTab: FormTab = hasActivities ? 'catalog' : hasBacklog ? 'tasks' : 'manual'
+      setFormTab(resetTab)
     }
   }
 
@@ -137,7 +146,7 @@ export function TaskForm({
   function handlePickActivity(activity: Activity) {
     setFormData({
       title: activity.title,
-      description: activity.description || '',
+      description: '',
       category: activity.category,
       priority: 'MEDIUM',
       energyLevel: activity.energyLevel,
@@ -150,8 +159,14 @@ export function TaskForm({
     setFormTab('manual')
   }
 
+  function handlePickTask(task: Task) {
+    if (onScheduleExistingTask) {
+      onScheduleExistingTask(task.id, formData.scheduledDate, formData.scheduledTime)
+    }
+  }
+
   const isFromActivity = !!fromActivity
-  const showTabs = !isFromActivity && !isEditing && activities.length > 0
+  const showTabs = !isFromActivity && !isEditing && (hasActivities || hasBacklog)
   const dialogTitle = isEditing
     ? 'Edit Task'
     : isFromActivity
@@ -165,21 +180,40 @@ export function TaskForm({
           <DialogTitle>{dialogTitle}</DialogTitle>
         </DialogHeader>
 
-        {/* Two-tab toggle when creating without a pre-selected activity */}
+        {/* Tab toggle when creating without a pre-selected activity */}
         {showTabs && (
           <div className="flex gap-1 rounded-lg bg-surface-elevated p-1">
-            <button
-              type="button"
-              onClick={() => setFormTab('catalog')}
-              className={cn(
-                'flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
-                formTab === 'catalog'
-                  ? 'bg-surface text-text-primary shadow-sm'
-                  : 'text-text-secondary hover:text-text-primary'
-              )}
-            >
-              From Catalog
-            </button>
+            {hasActivities && (
+              <button
+                type="button"
+                onClick={() => setFormTab('catalog')}
+                className={cn(
+                  'flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
+                  formTab === 'catalog'
+                    ? 'bg-surface text-text-primary shadow-sm'
+                    : 'text-text-secondary hover:text-text-primary'
+                )}
+              >
+                From Catalog
+              </button>
+            )}
+            {hasBacklog && (
+              <button
+                type="button"
+                onClick={() => setFormTab('tasks')}
+                className={cn(
+                  'flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
+                  formTab === 'tasks'
+                    ? 'bg-surface text-text-primary shadow-sm'
+                    : 'text-text-secondary hover:text-text-primary'
+                )}
+              >
+                From Tasks
+                <Badge variant="secondary" className="ml-1.5 text-[10px] px-1.5 py-0">
+                  {backlogTasks.length}
+                </Badge>
+              </button>
+            )}
             <button
               type="button"
               onClick={() => setFormTab('manual')}
@@ -198,55 +232,54 @@ export function TaskForm({
         {/* Catalog picker */}
         {showTabs && formTab === 'catalog' ? (
           <CatalogPicker activities={activities} onPick={handlePickActivity} />
+        ) : showTabs && formTab === 'tasks' ? (
+          <TaskPicker tasks={backlogTasks} onPick={handlePickTask} />
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Title */}
-            <div className="space-y-2">
-              <Label htmlFor="title">Title *</Label>
-              <Input
-                id="title"
-                value={formData.title}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, title: e.target.value }))
-                }
-                placeholder="What needs to be done?"
-                required
-              />
-            </div>
-
-            {/* Description - collapsed for quick-add */}
+            {/* Title — hidden when from activity (shown in dialog header) */}
             {!isFromActivity && (
               <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
-                <textarea
-                  id="description"
-                  value={formData.description}
+                <Label htmlFor="title">Title *</Label>
+                <Input
+                  id="title"
+                  value={formData.title}
                   onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      description: e.target.value,
-                    }))
+                    setFormData((prev) => ({ ...prev, title: e.target.value }))
                   }
-                  placeholder="Add more details..."
-                  className="w-full min-h-[80px] rounded-lg border border-border bg-surface px-3 py-2 text-sm placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-accent"
+                  placeholder="What needs to be done?"
+                  required
                 />
               </div>
             )}
 
-            {/* Category + Time Block — 2-column row */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Category</Label>
-                <CategoryCombobox
-                  value={formData.category}
-                  onChange={(value) =>
-                    setFormData((prev) => ({ ...prev, category: value }))
-                  }
-                />
-              </div>
+            {/* Description */}
+            <div className="space-y-2">
+              <Label htmlFor="description">
+                {isFromActivity ? 'What will you work on?' : 'Description'}
+              </Label>
+              <textarea
+                id="description"
+                value={formData.description}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    description: e.target.value,
+                  }))
+                }
+                placeholder={
+                  isFromActivity
+                    ? 'What will you do in this block?'
+                    : 'Add more details...'
+                }
+                className="w-full min-h-[80px] rounded-lg border border-border bg-surface px-3 py-2 text-sm placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-accent"
+              />
+            </div>
 
+            {/* Category + Time Block — 2-column row */}
+            {isFromActivity ? (
+              /* Activity-based: only show duration (category auto-set) */
               <div className="space-y-2">
-                <Label>Time Block</Label>
+                <Label>Duration</Label>
                 <Select
                   value={String(formData.timeBlockMinutes)}
                   onValueChange={(value) =>
@@ -265,7 +298,40 @@ export function TaskForm({
                   </SelectContent>
                 </Select>
               </div>
-            </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Category</Label>
+                  <CategoryCombobox
+                    value={formData.category}
+                    onChange={(value) =>
+                      setFormData((prev) => ({ ...prev, category: value }))
+                    }
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Time Block</Label>
+                  <Select
+                    value={String(formData.timeBlockMinutes)}
+                    onValueChange={(value) =>
+                      setFormData((prev) => ({ ...prev, timeBlockMinutes: Number(value) }))
+                    }
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {timeOptions.map((mins) => (
+                        <SelectItem key={mins} value={String(mins)}>
+                          {mins}m
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
 
             {/* Schedule */}
             <div className="grid grid-cols-2 gap-4">
@@ -560,6 +626,63 @@ function CatalogPicker({
                 </span>
                 <span className="text-[10px] text-text-tertiary">
                   {energyLabelsMap[activity.energyLevel]}
+                </span>
+              </div>
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+// Task picker — schedule an existing unscheduled task into the current slot
+const statusLabelsMap: Record<string, string> = {
+  TODO: 'To Do',
+  IN_PROGRESS: 'In Progress',
+  BLOCKED: 'Blocked',
+}
+
+function TaskPicker({
+  tasks,
+  onPick,
+}: {
+  tasks: Task[]
+  onPick: (task: Task) => void
+}) {
+  return (
+    <div className="max-h-[400px] overflow-y-auto space-y-2">
+      <p className="text-xs text-text-tertiary mb-2">
+        Pick a backlog task to schedule into this slot
+      </p>
+      <div className="grid grid-cols-2 gap-2">
+        {tasks.map((task) => {
+          const cat = getCategoryConfig(task.category)
+          return (
+            <button
+              key={task.id}
+              type="button"
+              onClick={() => onPick(task)}
+              className={cn(
+                'w-full rounded-lg border border-border p-3 text-left transition-all border-l-4',
+                'hover:border-border/80 hover:bg-surface-elevated'
+              )}
+              style={{ borderLeftColor: cat.color }}
+            >
+              <p className="font-medium text-sm">{task.title}</p>
+              <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                <Badge
+                  variant="secondary"
+                  className={cn('text-[10px] px-1.5 py-0', cat.textColor)}
+                >
+                  {cat.label}
+                </Badge>
+                <span className="flex items-center gap-0.5 text-[10px] text-text-tertiary">
+                  <Clock className="h-3 w-3" />
+                  {task.timeBlockMinutes || 90}m
+                </span>
+                <span className="text-[10px] text-text-tertiary">
+                  {statusLabelsMap[task.status] || task.status}
                 </span>
               </div>
             </button>

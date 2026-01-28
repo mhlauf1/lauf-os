@@ -11,22 +11,14 @@ import type { Activity, Task } from '@prisma/client'
 type SidebarTab = 'activities' | 'tasks'
 
 interface CommandSidebarProps {
-  // Activity props
   activities: Activity[]
   onSelectActivity: (activity: Activity) => void
-  onCreateActivity: () => void
-  onEditActivity: (activity: Activity) => void
-  onDeleteActivity: (id: string) => void
-  // Backlog tasks props
   backlogTasks?: Task[]
 }
 
 export function CommandSidebar({
   activities,
   onSelectActivity,
-  onCreateActivity,
-  onEditActivity,
-  onDeleteActivity,
   backlogTasks = [],
 }: CommandSidebarProps) {
   const [activeTab, setActiveTab] = useState<SidebarTab>('activities')
@@ -80,9 +72,6 @@ export function CommandSidebar({
           <ActivityCatalogContent
             activities={activities}
             onSelectActivity={onSelectActivity}
-            onCreateActivity={onCreateActivity}
-            onEditActivity={onEditActivity}
-            onDeleteActivity={onDeleteActivity}
             compact
           />
         ) : (

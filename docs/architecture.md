@@ -2,7 +2,7 @@
 
 > LAUF OS System Architecture Documentation
 
-**Status:** MVP Phase 1 Complete + Phase 1.5 Hardening Complete + Phase 2 Creative Library + Day Builder UX Overhaul Complete + Tweet Drafts Module Complete
+**Status:** MVP Phase 1 Complete + Phase 1.5 Hardening Complete + Phase 2 Creative Library + Day Builder UX Overhaul Complete + Tweet Drafts Module Complete + Activity Presets Complete
 
 **Related Documentation:**
 - [MVP Checklist](./mvp-checklist.md) - Implementation progress
@@ -87,8 +87,8 @@ lauf-os/
 │   │       │   ├── route.ts           # GET, POST
 │   │       │   └── [id]/route.ts      # PATCH, DELETE
 │   │       ├── activities/
-│   │       │   ├── route.ts           # GET, POST
-│   │       │   └── [id]/route.ts      # PATCH, DELETE
+│   │       │   ├── route.ts           # GET (auto-syncs presets), POST (403)
+│   │       │   └── [id]/route.ts      # PATCH (usage stats only), DELETE (403)
 │   │       ├── clients/
 │   │       │   ├── route.ts           # GET, POST
 │   │       │   └── [id]/route.ts      # GET, PATCH, DELETE
@@ -113,8 +113,7 @@ lauf-os/
 │   │   │   │   ├── TaskCard.tsx
 │   │   │   │   ├── TaskForm.tsx       # Task create/edit + catalog picker + "from activity" mode
 │   │   │   │   ├── TaskBacklog.tsx     # Draggable unscheduled task cards
-│   │   │   │   ├── ActivityCatalog.tsx # Activity picker grid (draggable cards)
-│   │   │   │   ├── ActivityForm.tsx    # Activity create/edit dialog
+│   │   │   │   ├── ActivityCatalog.tsx # Read-only activity preset grid (draggable cards)
 │   │   │   │   ├── CommandSidebar.tsx  # Tabbed sidebar (Goals / Activities)
 │   │   │   │   ├── DailyTimeline.tsx   # Timeline with droppable empty slots
 │   │   │   │   └── GoalsPanel.tsx      # Goals panel + GoalsPanelContent export
@@ -159,6 +158,7 @@ lauf-os/
 │   └── config/
 │       ├── navigation.ts
 │       ├── categories.ts
+│       ├── activity-presets.ts       # 19 fixed activity presets (source of truth)
 │       ├── library.ts                # Library type config (colors, icons, labels)
 │       └── site.ts
 ├── prisma/
@@ -214,7 +214,7 @@ User Action → React Query Mutation
 Used for all data that lives on the server:
 
 - Tasks and time blocks (`use-tasks.ts`)
-- Activities catalog (`use-activities.ts`)
+- Activity presets (`use-activities.ts` — read-only)
 - Goals and check-ins (`use-goals.ts`)
 - Clients (`use-clients.ts`)
 - Projects (`use-projects.ts`)
@@ -222,7 +222,7 @@ Used for all data that lives on the server:
 - Tweet drafts (`use-tweet-drafts.ts`)
 - Feed items (planned)
 
-Each hook follows the same pattern: `useX` for reads, `useCreateX` / `useUpdateX` / `useDeleteX` for mutations with automatic cache invalidation.
+Each hook follows the same pattern: `useX` for reads, `useCreateX` / `useUpdateX` / `useDeleteX` for mutations with automatic cache invalidation. Exception: `use-activities.ts` is read-only (`useActivities` only) since activities are fixed presets.
 
 ```typescript
 // Example: use-tasks.ts
@@ -273,7 +273,7 @@ Prisma provides type-safe database access with:
 |-------|---------|
 | `User` | User profile, preferences, timezone |
 | `Task` | 90-minute time blocks with categories; links to Activity + Goal |
-| `Activity` | Reusable catalog of activities (design, code, fitness, etc.) that pre-fill task creation |
+| `Activity` | 19 fixed activity presets (auto-synced from config) that pre-fill task creation |
 | `Goal` | Daily/weekly/monthly goals with progress; auto-incremented by task completion |
 | `Client` | Client info, health scores, credentials |
 | `Project` | Project pipeline with statuses |
@@ -353,10 +353,10 @@ components/modules/
 ├── command/                # Command Center
 │   ├── TimeBlock.tsx       # 90-min block card
 │   ├── TaskCard.tsx        # Task in queue
-│   ├── TaskForm.tsx        # Create/edit task + "from activity" quick-create
-│   ├── ActivityCatalog.tsx # Activity picker grid for Day Builder
-│   ├── ActivityForm.tsx    # Create/edit activity dialog
-│   ├── DailyTimeline.tsx   # Hour-by-hour view
+│   ├── TaskForm.tsx        # Create/edit task + catalog picker + description-first UX for presets
+│   ├── ActivityCatalog.tsx # Read-only activity preset grid for Day Builder (draggable)
+│   ├── DailyTimeline.tsx   # Hour-by-hour view with droppable slots
+│   ├── DayColumn.tsx       # Calendar week view day column
 │   └── GoalsPanel.tsx      # Goals sidebar
 └── clients/                # Client CRM
     ├── HealthScoreBadge.tsx
@@ -426,7 +426,8 @@ export function TaskCard({ task, onEdit }: TaskCardProps) {
 | **Time blocks** | 90 minutes | Optimal deep work duration |
 | **Drag & Drop** | @dnd-kit/core | DnD from activity catalog to timeline |
 | **Calendar dates** | parseCalendarDate() | Strip UTC from Prisma @db.Date to avoid timezone off-by-one |
+| **Activity presets** | Config + lazy DB sync | 19 fixed presets defined in config, auto-synced to DB on GET |
 
 ---
 
-_Last updated: January 2026 (v0.6.0 — Tweet Drafts Module + Command Center UX Enhancements)_
+_Last updated: January 2026 (v0.7.0 — Activity Presets + UX Refinements)_

@@ -49,7 +49,7 @@ All API routes return `{ data: T | null, error: string | null }`.
 **Core Models:**
 - `User` - Supabase auth integration, timezone, preferences
 - `Task` - 90-min blocks, category/priority/energy, links to Activity + Goal
-- `Activity` - Reusable task templates, tracks usage stats
+- `Activity` - 19 fixed activity presets (system-managed, auto-synced from config), tracks usage stats
 - `Goal` - Daily/Weekly/Monthly/Yearly with targetValue/currentValue progress
 
 **Client CRM Models:**
@@ -62,7 +62,7 @@ All API routes return `{ data: T | null, error: string | null }`.
 | Hook | Exports |
 |------|---------|
 | `use-tasks.ts` | `useTasks`, `useCreateTask`, `useUpdateTask`, `useDeleteTask` |
-| `use-activities.ts` | `useActivities`, `useCreateActivity`, `useUpdateActivity`, `useDeleteActivity` |
+| `use-activities.ts` | `useActivities` (read-only — presets are system-managed) |
 | `use-goals.ts` | `useGoals`, `useCreateGoal`, `useUpdateGoal` |
 | `use-clients.ts` | `useClients`, `useClient`, `useCreateClient`, `useUpdateClient`, `useDeleteClient` |
 | `use-projects.ts` | `useProjects`, `useProject`, `useCreateProject`, `useUpdateProject`, `useDeleteProject` |
@@ -95,8 +95,8 @@ All mutations auto-invalidate related query caches.
 ## Core Concept: Day Builder
 
 1. Set **monthly goals** ("Complete 3 projects", "Post 30 tweets")
-2. Build an **Activity Catalog** of everything you do
-3. Each morning: **select activities** to fill 90-min blocks
+2. Choose from **19 fixed activity presets** (design, code, fitness, etc.)
+3. Each morning: **select presets** to fill your day's blocks
 4. **Execute blocks** - completion auto-increments linked goal progress
 5. Daily progress compounds into weekly/monthly/yearly achievement
 
@@ -140,8 +140,8 @@ src/
 |-------|---------|-------------|
 | `/api/tasks` | GET, POST | List/create tasks (filters: date, dateFrom/dateTo, status, category) |
 | `/api/tasks/[id]` | PATCH, DELETE | Update/delete task (auto-increments goal+activity on completion) |
-| `/api/activities` | GET, POST | List/create activities |
-| `/api/activities/[id]` | PATCH, DELETE | Update/delete activity |
+| `/api/activities` | GET | List activity presets (auto-syncs from config; POST returns 403) |
+| `/api/activities/[id]` | PATCH | Update usage stats only (timesUsed/lastUsed; DELETE returns 403) |
 | `/api/goals` | GET, POST | List/create goals (filters: type, completed) |
 | `/api/goals/[id]` | PATCH | Update goal |
 | `/api/clients` | GET, POST | List/create clients (filters: status, healthScore, search) |
