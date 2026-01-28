@@ -12,6 +12,7 @@ interface TasksFilter {
   dateTo?: string
   status?: string
   category?: string
+  scheduled?: string
 }
 
 async function fetchTasks(filter: TasksFilter = {}): Promise<Task[]> {
@@ -21,6 +22,7 @@ async function fetchTasks(filter: TasksFilter = {}): Promise<Task[]> {
   if (filter.dateTo) params.set('dateTo', filter.dateTo)
   if (filter.status) params.set('status', filter.status)
   if (filter.category) params.set('category', filter.category)
+  if (filter.scheduled) params.set('scheduled', filter.scheduled)
 
   const res = await fetch(`/api/tasks?${params.toString()}`)
   const json: ApiResponse<Task[]> = await res.json()

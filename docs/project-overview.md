@@ -67,6 +67,7 @@ All API routes return `{ data: T | null, error: string | null }`.
 | `use-clients.ts` | `useClients`, `useClient`, `useCreateClient`, `useUpdateClient`, `useDeleteClient` |
 | `use-projects.ts` | `useProjects`, `useProject`, `useCreateProject`, `useUpdateProject`, `useDeleteProject` |
 | `use-library.ts` | `useLibrary`, `useLibraryItem`, `useCreateLibraryItem`, `useUpdateLibraryItem`, `useDeleteLibraryItem` |
+| `use-tweet-drafts.ts` | `useTweetDrafts`, `useTweetDraft`, `useCreateTweetDraft`, `useUpdateTweetDraft`, `useDeleteTweetDraft` |
 
 All mutations auto-invalidate related query caches.
 
@@ -87,7 +88,7 @@ All mutations auto-invalidate related query caches.
 | 4 | Health Tracker | 4 | Planned |
 | 5 | Financial Tracker | 4 | Planned |
 | 6 | Intel Feed | 3 | Planned |
-| 7 | Social Manager | 5 | Planned |
+| 7 | Social Manager | 5 | Tweet Drafts Complete (CRUD, status flow, tags, 280-char limit) |
 | 8 | AI Hub | 3 | Planned |
 | 9 | Relationships | 5 | Planned |
 
@@ -117,6 +118,7 @@ src/
 │   │   ├── clients/        # Client CRM
 │   │   ├── projects/       # Project pipeline
 │   │   ├── library/        # Creative Library (list + detail)
+│   │   ├── social/         # Social Manager (tweet drafts list + detail)
 │   │   └── settings/       # User settings
 │   └── api/                # API routes
 ├── components/
@@ -148,6 +150,8 @@ src/
 | `/api/projects/[id]` | GET, PATCH, DELETE | Get/update/delete project |
 | `/api/library` | GET, POST | List/create library items (filters: type, search) |
 | `/api/library/[id]` | GET, PATCH, DELETE | Get/update/delete library item |
+| `/api/tweets` | GET, POST | List/create tweet drafts (filters: status, search, tag) |
+| `/api/tweets/[id]` | GET, PATCH, DELETE | Get/update/delete tweet draft |
 
 ## What's Wired Up
 
@@ -176,6 +180,20 @@ src/
 - **React Query hooks**: `use-library.ts` with useLibrary, useLibraryItem, CRUD mutations + auto-invalidation
 - **Config**: `src/config/library.ts` with colors, icons, labels per LibraryItemType
 - **Validation**: Zod schemas in `src/lib/validations/library.schema.ts`
+
+### Social Manager — Tweet Drafts
+- **Tweet draft CRUD**: Full create/read/update/delete with Zod validation (280-char limit, thread support)
+- **Social list page** (`/social`): Stats cards (total/ready/posted), debounced search, status filter tabs (Draft/Ready/Posted/Archived)
+- **Social detail page** (`/social/[id]`): Character counter, status quick-actions (Ready/Posted/Draft/Archive), edit dialog, delete with redirect
+- **Components**: TweetDraftCard (status badge, content preview, char count, tags), TweetDraftForm (char counter, status toggle, TagInput), TweetGrid
+- **API routes**: `/api/tweets` (GET with status/search/tag filters, POST) + `/api/tweets/[id]` (GET, PATCH, DELETE) with ownership validation
+- **React Query hooks**: `use-tweet-drafts.ts` with useTweetDrafts, useTweetDraft, CRUD mutations + auto-invalidation
+- **Validation**: Zod schemas in `src/lib/validations/tweet-draft.schema.ts`
+
+### Command Center Enhancements
+- **TaskBacklog**: Draggable unscheduled task cards using `@dnd-kit/core` for Day Builder scheduling
+- **Calendar redesign**: Continuous timeline (6 AM–11 PM) with proportional task positioning replacing discrete time slots
+- **New shadcn/ui components**: Command (cmdk), Popover, Select
 
 ### Hardening (Phase 1.5)
 - **Toast notifications**: Sonner toaster in root layout, success/error on all mutations

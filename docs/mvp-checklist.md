@@ -210,7 +210,42 @@ The MVP focuses on two core modules:
 
 ---
 
-## Phase 3: Integration & Polish
+## Phase 3: Tweet Drafts Module (Social Manager Early Start) (Complete)
+
+**Goal**: Tweet draft management as the first piece of the Social Manager module
+
+### Prisma Schema
+- [x] `TweetDraft` model with content, status, tags, thread support
+- [x] `TweetDraftStatus` enum (DRAFT, READY, POSTED, ARCHIVED)
+- [x] User relation (`tweetDrafts` on User model)
+
+### API Routes
+- [x] `/api/tweets` (GET with status/search/tag filters, POST with Zod validation)
+- [x] `/api/tweets/[id]` (GET, PATCH, DELETE with ownership checks)
+
+### React Query Hooks
+- [x] `use-tweet-drafts.ts`: useTweetDrafts, useTweetDraft, useCreateTweetDraft, useUpdateTweetDraft, useDeleteTweetDraft
+
+### Components
+- [x] `TweetDraftCard` — card with status badge, content preview, char count, tags, dropdown actions
+- [x] `TweetDraftForm` — create/edit with character counter (280 limit), status toggle, TagInput
+- [x] `TweetGrid` — responsive 1-2-3 column grid
+
+### Pages
+- [x] `/social` — list page with stats cards, debounced search, status filter tabs
+- [x] `/social/[id]` — detail page with status actions, edit dialog, delete
+
+### Command Center Enhancements
+- [x] `TaskBacklog` — draggable unscheduled task cards for Day Builder
+- [x] Calendar page redesign — continuous timeline (6 AM–11 PM) with proportional positioning
+- [x] New shadcn/ui components: Command (cmdk), Popover, Select
+
+### Navigation
+- [x] Social section added to sidebar navigation
+
+---
+
+## Phase 3.5: Integration & Polish
 
 **Goal**: Connect modules and add finishing touches
 
@@ -257,7 +292,8 @@ When complete, the app should:
 | Phase 1.5: Hardening | Complete | 2026-01-27 | 2026-01-27 |
 | Phase 2.5: Creative Library | Complete | 2026-01-27 | 2026-01-27 |
 | Day Builder UX Overhaul | Complete | 2026-01-27 | 2026-01-27 |
-| Phase 3: Integration | In Progress | 2026-01-27 | - |
+| Phase 3: Tweet Drafts | Complete | 2026-01-27 | 2026-01-27 |
+| Phase 3.5: Integration | In Progress | 2026-01-27 | - |
 
 ---
 
@@ -269,6 +305,7 @@ When complete, the app should:
 - **2026-01-27**: Critical fixes + modular hardening. Fixed GoalsPanel tabs, timezone bug, useAuth re-render, form close timing. Wired dead buttons, added toast notifications, delete confirmations, and cache invalidation fixes across all modules.
 - **2026-01-27**: Creative Library module complete. Full CRUD, search, type filtering, detail views with type-specific fields. Navigation updated.
 - **2026-01-27**: Day Builder UX Overhaul complete. `@dnd-kit/core` drag-and-drop from Activity Catalog to timeline slots, CommandSidebar with Goals/Activities tabs, TaskForm two-tab mode ("From Catalog" / "Manual"), timezone fix for Prisma `@db.Date` fields.
+- **2026-01-27**: Tweet Drafts module complete. TweetDraft model, full CRUD API with filters, React Query hooks, TweetDraftCard/Form/Grid components, social list + detail pages, navigation updated. Also added TaskBacklog component and redesigned calendar page with continuous timeline.
 - Focus on functionality over polish in MVP
 - Document any blockers or decisions made
 
@@ -277,9 +314,11 @@ When complete, the app should:
 ## Next Steps
 
 1. Run database migration (waiting for credentials)
-2. Add task category filtering
-3. Add inline edit flows for clients and projects
-4. Start Intel Feed + AI Hub (Phase 3)
+2. X/Twitter API integration for tweet publishing
+3. Tweet scheduling with calendar view
+4. Add task category filtering
+5. Add inline edit flows for clients and projects
+6. Start Intel Feed + AI Hub (Phase 3)
 
 ---
 

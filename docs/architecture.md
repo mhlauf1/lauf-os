@@ -2,7 +2,7 @@
 
 > LAUF OS System Architecture Documentation
 
-**Status:** MVP Phase 1 Complete + Phase 1.5 Hardening Complete + Phase 2 Creative Library + Day Builder UX Overhaul Complete
+**Status:** MVP Phase 1 Complete + Phase 1.5 Hardening Complete + Phase 2 Creative Library + Day Builder UX Overhaul Complete + Tweet Drafts Module Complete
 
 **Related Documentation:**
 - [MVP Checklist](./mvp-checklist.md) - Implementation progress
@@ -26,7 +26,7 @@ LAUF OS is a **Personal Operating System** - a unified dashboard for managing al
 | **Health** | Phase 4 | Workouts, check-ins, sobriety tracking |
 | **Finances** | Phase 4 | Income/expenses, MRR tracking |
 | **Intel Feed** | Phase 3 | RSS feeds, saved articles |
-| **Social** | Phase 5 | X posting, scheduling, analytics |
+| **Social** | Phase 5 | Tweet drafts (done), X posting, scheduling, analytics |
 | **AI Hub** | Phase 3 | AI tool subscriptions, cheat sheets |
 | **Relationships** | Phase 5 | Contact management, follow-ups |
 
@@ -78,6 +78,9 @@ lauf-os/
 │   │   │   ├── library/
 │   │   │   │   ├── page.tsx
 │   │   │   │   └── [id]/page.tsx
+│   │   │   ├── social/
+│   │   │   │   ├── page.tsx              # Tweet drafts list
+│   │   │   │   └── [id]/page.tsx         # Tweet draft detail
 │   │   │   └── settings/page.tsx
 │   │   └── api/
 │   │       ├── tasks/
@@ -95,7 +98,10 @@ lauf-os/
 │   │       ├── goals/
 │   │       │   ├── route.ts           # GET, POST
 │   │       │   └── [id]/route.ts      # PATCH
-│   │       └── library/
+│   │       ├── library/
+│   │       │   ├── route.ts           # GET, POST
+│   │       │   └── [id]/route.ts      # GET, PATCH, DELETE
+│   │       └── tweets/
 │   │           ├── route.ts           # GET, POST
 │   │           └── [id]/route.ts      # GET, PATCH, DELETE
 │   ├── components/
@@ -106,6 +112,7 @@ lauf-os/
 │   │   │   │   ├── TimeBlock.tsx
 │   │   │   │   ├── TaskCard.tsx
 │   │   │   │   ├── TaskForm.tsx       # Task create/edit + catalog picker + "from activity" mode
+│   │   │   │   ├── TaskBacklog.tsx     # Draggable unscheduled task cards
 │   │   │   │   ├── ActivityCatalog.tsx # Activity picker grid (draggable cards)
 │   │   │   │   ├── ActivityForm.tsx    # Activity create/edit dialog
 │   │   │   │   ├── CommandSidebar.tsx  # Tabbed sidebar (Goals / Activities)
@@ -116,6 +123,10 @@ lauf-os/
 │   │   │   │   ├── LibraryGrid.tsx
 │   │   │   │   ├── LibraryItemForm.tsx
 │   │   │   │   └── TagInput.tsx
+│   │   │   ├── social/               # Social Manager components
+│   │   │   │   ├── TweetDraftCard.tsx
+│   │   │   │   ├── TweetDraftForm.tsx
+│   │   │   │   └── TweetGrid.tsx
 │   │   │   └── clients/              # Client CRM components
 │   │   │       ├── HealthScoreBadge.tsx
 │   │   │       ├── ClientCard.tsx
@@ -208,6 +219,7 @@ Used for all data that lives on the server:
 - Clients (`use-clients.ts`)
 - Projects (`use-projects.ts`)
 - Library items (`use-library.ts`)
+- Tweet drafts (`use-tweet-drafts.ts`)
 - Feed items (planned)
 
 Each hook follows the same pattern: `useX` for reads, `useCreateX` / `useUpdateX` / `useDeleteX` for mutations with automatic cache invalidation.
@@ -417,4 +429,4 @@ export function TaskCard({ task, onEdit }: TaskCardProps) {
 
 ---
 
-_Last updated: January 2026 (v0.5.0 — Creative Library + Day Builder UX Overhaul)_
+_Last updated: January 2026 (v0.6.0 — Tweet Drafts Module + Command Center UX Enhancements)_

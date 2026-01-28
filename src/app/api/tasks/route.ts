@@ -48,6 +48,7 @@ export async function GET(request: NextRequest) {
     const date = searchParams.get('date')
     const dateFrom = searchParams.get('dateFrom')
     const dateTo = searchParams.get('dateTo')
+    const scheduled = searchParams.get('scheduled')
 
     // Build date filter: use range to avoid timezone mismatch
     let dateFilter: Record<string, unknown> | undefined
@@ -73,6 +74,8 @@ export async function GET(request: NextRequest) {
         ...(status && status !== 'all' && { status: status as any }),
         ...(category && { category: category as any }),
         ...dateFilter,
+        ...(scheduled === 'true' && { scheduledDate: { not: null } }),
+        ...(scheduled === 'false' && { scheduledDate: null }),
       },
       orderBy: [{ scheduledDate: 'asc' }, { scheduledTime: 'asc' }],
       include: {

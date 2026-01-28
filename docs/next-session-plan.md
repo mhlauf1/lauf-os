@@ -1,27 +1,28 @@
 # Next Session Plan
 
-> **Previous Session:** Day Builder UX Overhaul + Creative Library (2026-01-27) — Complete
+> **Previous Session:** Tweet Drafts Module + Command Center UX Enhancements (2026-01-27) — Complete
 >
-> Branch: `feat/day-builder-ux-overhaul-and-library`
+> Branch: `feat/twitter-drafts-module`
 
 ---
 
 ## What Was Completed
 
-### Creative Library Module (v0.5.0)
-- Full CRUD with Zod validation, API routes, React Query hooks
-- Library list page with stats, search, type filter tabs, grid display
-- Library detail page with type-specific fields, edit/delete
-- Components: LibraryItemCard, LibraryGrid, LibraryItemForm, TagInput
-- Navigation updated: Library in "Creative" nav group
-- `ensureUser` helper for consistent API user creation
+### Tweet Drafts Module (v0.6.0)
+- `TweetDraft` Prisma model with `TweetDraftStatus` enum (DRAFT, READY, POSTED, ARCHIVED)
+- Zod validation schemas with 280-char limit + thread support (tweetNumber/totalTweets)
+- API routes: `/api/tweets` (GET with status/search/tag filters, POST) + `/api/tweets/[id]` (GET, PATCH, DELETE)
+- React Query hooks: useTweetDrafts, useTweetDraft, useCreateTweetDraft, useUpdateTweetDraft, useDeleteTweetDraft
+- Components: TweetDraftCard (status badge, char count, tags), TweetDraftForm (char counter, status toggle, TagInput), TweetGrid
+- Social list page (`/social`) with stats cards, debounced search, status filter tabs
+- Social detail page (`/social/[id]`) with status actions, edit dialog, delete
+- Navigation updated with Social section
 
-### Day Builder UX Overhaul (v0.5.0)
-- `@dnd-kit/core` drag-and-drop: drag activities from sidebar onto timeline slots
-- CommandSidebar: tabbed sidebar (Goals / Activities) replaces separate panels
-- TaskForm two-tab mode: "From Catalog" / "Manual" tabs
-- Extracted GoalsPanelContent + ActivityCatalogContent for reuse
-- Fixed timezone bug in Prisma `@db.Date` calendar date parsing
+### Command Center UX Enhancements (v0.6.0)
+- `TaskBacklog` component: draggable unscheduled task cards for Day Builder
+- Calendar page redesign: continuous timeline (6 AM–11 PM) with proportional task positioning
+- New shadcn/ui components: Command (cmdk), Popover, Select
+- Various UX refinements across DailyTimeline, CommandSidebar, GoalsPanel, TaskForm, TimeBlock
 
 ---
 
@@ -29,24 +30,30 @@
 
 ### 1. Database Migration
 - Still waiting for production Supabase credentials
-- Once available: `npm run prisma:migrate` to sync schema
+- Once available: `npm run prisma:migrate` to sync schema (includes TweetDraft model)
 
-### 2. Remaining Polish Items
+### 2. Social Manager — Publishing
+- X/Twitter API integration for publishing drafts
+- Status flow: READY → POSTED with `postedAt` timestamp
+- Tweet scheduling with calendar view
+
+### 3. Remaining Polish Items
 - Add task category filtering on tasks page
 - Add inline edit flows for clients and projects
 - Drag tasks to different days on calendar view
 - Add Zod schemas for all remaining forms (client-side validation)
 
-### 3. Phase 3: Intel Feed + AI Hub
+### 4. Phase 3: Intel Feed + AI Hub
 - RSS feed aggregation
 - Article summaries with AI
 - AI tool directory and cheat sheets
 - Basic Claude API integration
 
-### 4. Stretch Goals
+### 5. Stretch Goals
 - Supabase Storage integration for file uploads
 - Client asset management
 - Health score auto-calculation
+- Tweet analytics dashboard
 
 ---
 

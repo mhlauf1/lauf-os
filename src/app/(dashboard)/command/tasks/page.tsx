@@ -28,7 +28,7 @@ export default function TasksPage() {
   const [showCategoryFilter, setShowCategoryFilter] = useState(false)
   const [taskFormOpen, setTaskFormOpen] = useState(false)
 
-  const filter: Record<string, string> = {}
+  const filter: Record<string, string> = { scheduled: 'false' }
   if (activeTab !== 'all') filter.status = activeTab
   if (categoryFilter) filter.category = categoryFilter
 

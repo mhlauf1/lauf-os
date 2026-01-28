@@ -71,6 +71,7 @@ src/
 │   │   ├── clients/        # Client CRM
 │   │   ├── projects/       # Project pipeline
 │   │   ├── library/        # Creative Library (list + detail)
+│   │   ├── social/         # Social Manager (tweet drafts list + detail)
 │   │   └── settings/       # User settings
 │   └── api/                # API routes
 │       ├── tasks/          # GET, POST + [id] PATCH, DELETE
@@ -78,13 +79,15 @@ src/
 │       ├── clients/        # GET, POST + [id] GET, PATCH, DELETE
 │       ├── projects/       # GET, POST + [id] GET, PATCH, DELETE
 │       ├── library/        # GET, POST + [id] GET, PATCH, DELETE
+│       ├── tweets/         # GET, POST + [id] GET, PATCH, DELETE
 │       └── goals/          # GET, POST + [id] PATCH
 ├── components/
 │   ├── ui/                 # shadcn/ui primitives
 │   ├── modules/            # Module-specific components
-│   │   ├── command/        # TimeBlock, TaskCard, TaskForm, ActivityCatalog, CommandSidebar, DailyTimeline, etc.
+│   │   ├── command/        # TimeBlock, TaskCard, TaskForm, TaskBacklog, ActivityCatalog, CommandSidebar, DailyTimeline, etc.
 │   │   ├── clients/        # ClientCard, HealthScoreBadge, etc.
-│   │   └── library/        # LibraryItemCard, LibraryGrid, LibraryItemForm, TagInput
+│   │   ├── library/        # LibraryItemCard, LibraryGrid, LibraryItemForm, TagInput
+│   │   └── social/         # TweetDraftCard, TweetDraftForm, TweetGrid
 │   ├── providers.tsx       # QueryClientProvider (React Query)
 │   ├── layouts/            # Layout components
 │   └── shared/             # Shared components
@@ -94,7 +97,7 @@ src/
 │   ├── ai/                 # AI service clients
 │   ├── validations/        # Zod schemas
 │   └── utils/              # Utility functions
-├── hooks/                  # React hooks (use-tasks, use-activities, use-goals, use-clients, use-projects, use-library, use-auth)
+├── hooks/                  # React hooks (use-tasks, use-activities, use-goals, use-clients, use-projects, use-library, use-tweet-drafts, use-auth)
 ├── stores/                 # Zustand stores
 ├── types/                  # TypeScript types
 └── config/                 # App configuration
@@ -126,6 +129,9 @@ Prisma schema located at `prisma/schema.prisma`. Key models:
 - **Opportunity** - Upsell/expansion opportunities
 - **Asset** - Files linked to clients/projects
 
+### Social Manager Models
+- **TweetDraft** - Tweet draft with content (280 char limit), status, tags, thread support (tweetNumber/totalTweets)
+
 ### Enums
 - **TaskCategory**: DESIGN, CODE, CLIENT, LEARNING, FITNESS, ADMIN, SAAS, NETWORKING
 - **TaskStatus**: TODO, IN_PROGRESS, BLOCKED, DONE
@@ -134,6 +140,7 @@ Prisma schema located at `prisma/schema.prisma`. Key models:
 - **ClientStatus**: ACTIVE, PAUSED, COMPLETED, CHURNED
 - **HealthScore**: GREEN, YELLOW, RED
 - **ProjectStatus**: PLANNING, DESIGN, DEVELOPMENT, REVIEW, LAUNCHED
+- **TweetDraftStatus**: DRAFT, READY, POSTED, ARCHIVED
 
 ## Code Conventions
 
@@ -247,8 +254,8 @@ Clients have a health score (GREEN/YELLOW/RED) based on:
 
 ### State Management
 
-- **Server state** (React Query): Tasks, activities, clients, projects, goals, library
-  - Hooks: `use-tasks.ts`, `use-activities.ts`, `use-goals.ts`, `use-clients.ts`, `use-projects.ts`, `use-library.ts`
+- **Server state** (React Query): Tasks, activities, clients, projects, goals, library, tweet drafts
+  - Hooks: `use-tasks.ts`, `use-activities.ts`, `use-goals.ts`, `use-clients.ts`, `use-projects.ts`, `use-library.ts`, `use-tweet-drafts.ts`
   - Each hook exports `useX`, `useCreateX`, `useUpdateX`, `useDeleteX`
   - `use-clients.ts` and `use-projects.ts` also export `useClient(id)` and `useProject(id)` for single-record fetching
   - Mutations auto-invalidate related query caches
@@ -353,6 +360,21 @@ Clients have a health score (GREEN/YELLOW/RED) based on:
 - [x] Extracted GoalsPanelContent + ActivityCatalogContent for reuse in sidebar
 - [x] Fixed timezone bug in calendar date parsing (Prisma `@db.Date` → local date conversion)
 
+**Tweet Drafts Module (Social Manager Early Start)** (Complete)
+- [x] `TweetDraft` Prisma model with `TweetDraftStatus` enum (DRAFT, READY, POSTED, ARCHIVED)
+- [x] Zod validation schemas (`src/lib/validations/tweet-draft.schema.ts`) with 280 char limit + thread support
+- [x] API routes: `/api/tweets` (GET, POST) + `/api/tweets/[id]` (GET, PATCH, DELETE) with status/search/tag filters
+- [x] React Query hooks (`use-tweet-drafts.ts`): useTweetDrafts, useTweetDraft, CRUD mutations
+- [x] Components: TweetDraftCard, TweetDraftForm (char counter, status toggle, TagInput), TweetGrid
+- [x] Social list page (`/social`) with stats cards, debounced search, status filter tabs
+- [x] Social detail page (`/social/[id]`) with status actions (Ready/Posted/Draft/Archive), edit/delete
+- [x] Navigation: Social section added to sidebar
+- [x] `TaskBacklog` component: draggable unscheduled tasks for Day Builder
+- [x] Calendar page redesign: continuous timeline (6 AM–11 PM) with proportional task positioning
+- [x] New shadcn/ui components: Command (cmdk), Popover, Select
+
 **Next Up:**
 - [ ] Database migration (waiting for credentials)
 - [ ] Intel Feed + AI Hub (Phase 3)
+- [ ] X/Twitter API integration for publishing
+- [ ] Tweet scheduling with calendar view
