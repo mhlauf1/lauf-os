@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { Palette, Code2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -13,40 +14,39 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog'
 import { TagInput } from './TagInput'
-import { libraryTypeList } from '@/config/library'
-import type { LibraryItem, LibraryItemType, Goal } from '@prisma/client'
+import { ImageUpload } from './ImageUpload'
+import { codeLanguageList } from '@/config/library'
+import type { LibraryItem, LibraryItemType, LibraryItemStatus, Goal } from '@prisma/client'
 
 interface LibraryItemFormData {
   type: LibraryItemType
+  status: LibraryItemStatus
   title: string
   description: string
   sourceUrl: string
   figmaUrl: string
   githubUrl: string
-  prompt: string
-  aiTool: string
   techStack: string[]
   tags: string[]
-  isShowcased: boolean
-  isForSale: boolean
-  price: string
+  code: string
+  language: string
+  thumbnailUrl: string
   goalId: string
 }
 
 export interface LibraryFormPayload {
   type: string
+  status?: string
   title: string
   description?: string
   sourceUrl?: string
   figmaUrl?: string
   githubUrl?: string
-  prompt?: string
-  aiTool?: string
   techStack?: string[]
   tags: string[]
-  isShowcased: boolean
-  isForSale: boolean
-  price?: number
+  code?: string
+  language?: string
+  thumbnailUrl?: string
   goalId?: string
 }
 
@@ -63,39 +63,61 @@ function getDefaultFormData(initialData?: LibraryItem | null): LibraryItemFormDa
   if (initialData) {
     return {
       type: initialData.type as LibraryItemType,
+      status: (initialData.status as LibraryItemStatus) || 'ACTIVE',
       title: initialData.title,
       description: initialData.description || '',
       sourceUrl: initialData.sourceUrl || '',
       figmaUrl: initialData.figmaUrl || '',
       githubUrl: initialData.githubUrl || '',
-      prompt: initialData.prompt || '',
-      aiTool: initialData.aiTool || '',
       techStack: (initialData.techStack as string[]) || [],
       tags: (initialData.tags as string[]) || [],
-      isShowcased: initialData.isShowcased,
-      isForSale: initialData.isForSale,
-      price: initialData.price != null ? String(Number(initialData.price)) : '',
-      goalId: (initialData as any).goalId || '',
+      code: initialData.code || '',
+      language: initialData.language || '',
+      thumbnailUrl: initialData.thumbnailUrl || '',
+      goalId: initialData.goalId || '',
     }
   }
 
   return {
-    type: 'INSPIRATION',
+    type: 'DESIGN',
+    status: 'ACTIVE',
     title: '',
     description: '',
     sourceUrl: '',
     figmaUrl: '',
     githubUrl: '',
-    prompt: '',
-    aiTool: '',
     techStack: [],
     tags: [],
-    isShowcased: false,
-    isForSale: false,
-    price: '',
+    code: '',
+    language: '',
+    thumbnailUrl: '',
     goalId: '',
   }
 }
+
+const typeOptions = [
+  {
+    id: 'DESIGN' as const,
+    label: 'Design',
+    description: 'Screenshots, videos, Figma files, visual references',
+    icon: Palette,
+    color: 'text-violet-400',
+    bgColor: 'bg-violet-500/10',
+  },
+  {
+    id: 'DEVELOPED' as const,
+    label: 'Developed',
+    description: 'Components, sections, pages, templates - built code',
+    icon: Code2,
+    color: 'text-blue-400',
+    bgColor: 'bg-blue-500/10',
+  },
+]
+
+const statusOptions = [
+  { id: 'ACTIVE' as const, label: 'Active', color: 'text-green-400', bgColor: 'bg-green-500/10' },
+  { id: 'ARCHIVED' as const, label: 'Archived', color: 'text-gray-400', bgColor: 'bg-gray-500/10' },
+]
 
 export function LibraryItemForm({
   open,
@@ -124,35 +146,25 @@ export function LibraryItemForm({
 
     const payload: LibraryFormPayload = {
       type: formData.type,
-      title: formData.title,
+      status: formData.status,
       tags: formData.tags,
-      isShowcased: formData.isShowcased,
-      isForSale: formData.isForSale,
+      title: formData.title,
     }
 
     if (formData.description) payload.description = formData.description
     if (formData.sourceUrl) payload.sourceUrl = formData.sourceUrl
     if (formData.figmaUrl) payload.figmaUrl = formData.figmaUrl
     if (formData.githubUrl) payload.githubUrl = formData.githubUrl
-    if (formData.prompt) payload.prompt = formData.prompt
-    if (formData.aiTool) payload.aiTool = formData.aiTool
     if (formData.techStack.length > 0) payload.techStack = formData.techStack
-    if (formData.isForSale && formData.price) {
-      payload.price = parseFloat(formData.price)
-    }
-    if (formData.goalId) {
-      payload.goalId = formData.goalId
-    }
+    if (formData.code) payload.code = formData.code
+    if (formData.language) payload.language = formData.language
+    if (formData.thumbnailUrl) payload.thumbnailUrl = formData.thumbnailUrl
+    if (formData.goalId) payload.goalId = formData.goalId
 
     onSubmit(payload)
   }
 
-  const showSourceUrl = ['INSPIRATION', 'TEMPLATE', 'AI_IMAGE', 'COMPONENT'].includes(formData.type)
-  const showFigmaUrl = formData.type === 'TEMPLATE'
-  const showGithubUrl = ['TEMPLATE', 'COMPONENT'].includes(formData.type)
-  const showPrompt = formData.type === 'AI_IMAGE'
-  const showAiTool = formData.type === 'AI_IMAGE'
-  const showTechStack = ['TEMPLATE', 'COMPONENT'].includes(formData.type)
+  const isDeveloped = formData.type === 'DEVELOPED'
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -163,26 +175,57 @@ export function LibraryItemForm({
           </DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Type Selector */}
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Type Selector - Large buttons */}
           <div className="space-y-2">
             <Label>Type</Label>
-            <div className="grid grid-cols-5 gap-2">
-              {libraryTypeList.map((t) => (
+            <div className="grid grid-cols-2 gap-3">
+              {typeOptions.map((t) => {
+                const Icon = t.icon
+                return (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() =>
+                      setFormData((prev) => ({ ...prev, type: t.id }))
+                    }
+                    className={cn(
+                      'flex flex-col items-start gap-2 rounded-lg border-2 p-4 text-left transition-all',
+                      formData.type === t.id
+                        ? cn('border-current', t.bgColor, t.color)
+                        : 'border-border text-text-secondary hover:border-text-tertiary hover:text-text-primary'
+                    )}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Icon className="h-5 w-5" />
+                      <span className="font-medium">{t.label}</span>
+                    </div>
+                    <p className="text-xs opacity-70">{t.description}</p>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Status Selector */}
+          <div className="space-y-2">
+            <Label>Status</Label>
+            <div className="flex gap-2">
+              {statusOptions.map((s) => (
                 <button
-                  key={t.id}
+                  key={s.id}
                   type="button"
                   onClick={() =>
-                    setFormData((prev) => ({ ...prev, type: t.id }))
+                    setFormData((prev) => ({ ...prev, status: s.id }))
                   }
                   className={cn(
-                    'rounded-lg border p-2 text-xs font-medium transition-colors',
-                    formData.type === t.id
-                      ? 'border-text-primary/30 bg-white/10 text-text-primary'
-                      : 'border-border text-text-secondary hover:border-border/80'
+                    'rounded-full px-4 py-1.5 text-sm font-medium transition-all border-2',
+                    formData.status === s.id
+                      ? cn(s.bgColor, s.color, 'border-current')
+                      : 'bg-surface-elevated text-text-secondary border-transparent hover:text-text-primary hover:border-border'
                   )}
                 >
-                  {t.label}
+                  {s.label}
                 </button>
               ))}
             </div>
@@ -217,18 +260,16 @@ export function LibraryItemForm({
             />
           </div>
 
-          {/* Tags */}
-          <div className="space-y-2">
-            <Label>Tags</Label>
-            <TagInput
-              value={formData.tags}
-              onChange={(tags) => setFormData((prev) => ({ ...prev, tags }))}
-              placeholder="Add tag and press Enter..."
-            />
-          </div>
+          {/* Thumbnail Upload */}
+          <ImageUpload
+            value={formData.thumbnailUrl}
+            onChange={(url) =>
+              setFormData((prev) => ({ ...prev, thumbnailUrl: url }))
+            }
+          />
 
-          {/* Type-specific fields */}
-          {showSourceUrl && (
+          {/* URLs */}
+          <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="lib-source">Source URL</Label>
               <Input
@@ -241,9 +282,7 @@ export function LibraryItemForm({
                 placeholder="https://..."
               />
             </div>
-          )}
 
-          {showFigmaUrl && (
             <div className="space-y-2">
               <Label htmlFor="lib-figma">Figma URL</Label>
               <Input
@@ -256,9 +295,7 @@ export function LibraryItemForm({
                 placeholder="https://figma.com/..."
               />
             </div>
-          )}
 
-          {showGithubUrl && (
             <div className="space-y-2">
               <Label htmlFor="lib-github">GitHub URL</Label>
               <Input
@@ -271,48 +308,72 @@ export function LibraryItemForm({
                 placeholder="https://github.com/..."
               />
             </div>
-          )}
+          </div>
 
-          {showPrompt && (
-            <div className="space-y-2">
-              <Label htmlFor="lib-prompt">AI Prompt</Label>
-              <textarea
-                id="lib-prompt"
-                value={formData.prompt}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, prompt: e.target.value }))
-                }
-                placeholder="The prompt used to generate this..."
-                rows={3}
-                className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-accent"
-              />
-            </div>
-          )}
+          {/* Tags */}
+          <div className="space-y-2">
+            <Label>Tags</Label>
+            <TagInput
+              value={formData.tags}
+              onChange={(tags) => setFormData((prev) => ({ ...prev, tags }))}
+              placeholder="Add tag and press Enter..."
+            />
+          </div>
 
-          {showAiTool && (
-            <div className="space-y-2">
-              <Label htmlFor="lib-aitool">AI Tool</Label>
-              <Input
-                id="lib-aitool"
-                value={formData.aiTool}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, aiTool: e.target.value }))
-                }
-                placeholder="e.g., Midjourney, DALL-E, Stable Diffusion"
-              />
-            </div>
-          )}
+          {/* Tech Stack */}
+          <div className="space-y-2">
+            <Label>Tech Stack</Label>
+            <TagInput
+              value={formData.techStack}
+              onChange={(techStack) =>
+                setFormData((prev) => ({ ...prev, techStack }))
+              }
+              placeholder="Add technology and press Enter..."
+            />
+          </div>
 
-          {showTechStack && (
-            <div className="space-y-2">
-              <Label>Tech Stack</Label>
-              <TagInput
-                value={formData.techStack}
-                onChange={(techStack) =>
-                  setFormData((prev) => ({ ...prev, techStack }))
-                }
-                placeholder="Add technology and press Enter..."
-              />
+          {/* Code Fields - shown for DEVELOPED type */}
+          {isDeveloped && (
+            <div className="space-y-4 rounded-lg border border-border bg-surface-elevated p-4">
+              <div className="flex items-center gap-2">
+                <Code2 className="h-4 w-4 text-blue-400" />
+                <span className="text-sm font-medium">Code</span>
+              </div>
+
+              {/* Language Selector */}
+              <div className="space-y-2">
+                <Label htmlFor="lib-language">Language</Label>
+                <select
+                  id="lib-language"
+                  value={formData.language}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, language: e.target.value }))
+                  }
+                  className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
+                >
+                  <option value="">Select language...</option>
+                  {codeLanguageList.map((lang) => (
+                    <option key={lang.id} value={lang.id}>
+                      {lang.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Code Textarea */}
+              <div className="space-y-2">
+                <Label htmlFor="lib-code">Code</Label>
+                <textarea
+                  id="lib-code"
+                  value={formData.code}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, code: e.target.value }))
+                  }
+                  placeholder="Paste your code here..."
+                  rows={8}
+                  className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm font-mono placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-accent"
+                />
+              </div>
             </div>
           )}
 
@@ -353,76 +414,6 @@ export function LibraryItemForm({
               )}
             </div>
           )}
-
-          {/* Showcase toggle */}
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() =>
-                setFormData((prev) => ({
-                  ...prev,
-                  isShowcased: !prev.isShowcased,
-                }))
-              }
-              className={cn(
-                'h-5 w-9 rounded-full transition-colors',
-                formData.isShowcased ? 'bg-amber-500' : 'bg-border'
-              )}
-            >
-              <span
-                className={cn(
-                  'block h-4 w-4 rounded-full bg-white transition-transform',
-                  formData.isShowcased ? 'translate-x-4.5' : 'translate-x-0.5'
-                )}
-              />
-            </button>
-            <Label className="cursor-pointer">Showcase this item</Label>
-          </div>
-
-          {/* For Sale toggle + price */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    isForSale: !prev.isForSale,
-                    price: !prev.isForSale ? prev.price : '',
-                  }))
-                }
-                className={cn(
-                  'h-5 w-9 rounded-full transition-colors',
-                  formData.isForSale ? 'bg-green-500' : 'bg-border'
-                )}
-              >
-                <span
-                  className={cn(
-                    'block h-4 w-4 rounded-full bg-white transition-transform',
-                    formData.isForSale ? 'translate-x-4.5' : 'translate-x-0.5'
-                  )}
-                />
-              </button>
-              <Label className="cursor-pointer">Available for sale</Label>
-            </div>
-            {formData.isForSale && (
-              <div className="space-y-2 pl-12">
-                <Label htmlFor="lib-price">Price ($)</Label>
-                <Input
-                  id="lib-price"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={formData.price}
-                  onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, price: e.target.value }))
-                  }
-                  placeholder="0.00"
-                  className="max-w-[200px]"
-                />
-              </div>
-            )}
-          </div>
 
           <DialogFooter>
             <Button

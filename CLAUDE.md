@@ -52,7 +52,7 @@ npm run prisma:studio    # Open Prisma Studio
 |---|--------|-------------|-------|
 | 1 | **Command Center** | Daily timeline, 90-min blocks, tasks, goals | Phase 1 |
 | 2 | **Client CRM** | Clients, projects, health scores, opportunities | Phase 1 |
-| 3 | **Creative Library** | Inspirations, templates, AI images, components | Phase 2 |
+| 3 | **Creative Library** | Design references, developed code assets | Phase 2 |
 | 4 | **Health Tracker** | Workouts, nutrition, sobriety, check-ins | Phase 4 |
 | 5 | **Financial Tracker** | Income, expenses, investments, goals | Phase 4 |
 | 6 | **Intel Feed** | RSS aggregation, AI summaries, bookmarks | Phase 3 |

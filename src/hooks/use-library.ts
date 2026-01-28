@@ -8,19 +8,17 @@ interface ApiResponse<T> {
 
 interface LibraryFilter {
   type?: string
+  status?: string
   search?: string
   tag?: string
-  showcased?: boolean
-  forSale?: boolean
 }
 
 async function fetchLibraryItems(filter: LibraryFilter = {}): Promise<LibraryItem[]> {
   const params = new URLSearchParams()
   if (filter.type) params.set('type', filter.type)
+  if (filter.status) params.set('status', filter.status)
   if (filter.search) params.set('search', filter.search)
   if (filter.tag) params.set('tag', filter.tag)
-  if (filter.showcased !== undefined) params.set('showcased', String(filter.showcased))
-  if (filter.forSale !== undefined) params.set('forSale', String(filter.forSale))
 
   const res = await fetch(`/api/library?${params.toString()}`)
   const json: ApiResponse<LibraryItem[]> = await res.json()
@@ -37,18 +35,19 @@ async function fetchLibraryItem(id: string): Promise<LibraryItem> {
 
 export interface CreateLibraryItemData {
   type: string
+  status?: string
   title: string
   description?: string
   sourceUrl?: string
   figmaUrl?: string
   githubUrl?: string
-  prompt?: string
-  aiTool?: string
   techStack?: string[]
   tags?: string[]
-  isShowcased?: boolean
-  isForSale?: boolean
-  price?: number
+  // Code fields
+  code?: string
+  language?: string
+  // Image field
+  thumbnailUrl?: string
   goalId?: string
 }
 
@@ -66,18 +65,19 @@ async function createLibraryItem(data: CreateLibraryItemData): Promise<LibraryIt
 export interface UpdateLibraryItemData {
   id: string
   type?: string
+  status?: string
   title?: string
   description?: string | null
   sourceUrl?: string | null
   figmaUrl?: string | null
   githubUrl?: string | null
-  prompt?: string | null
-  aiTool?: string | null
   techStack?: string[]
   tags?: string[]
-  isShowcased?: boolean
-  isForSale?: boolean
-  price?: number | null
+  // Code fields
+  code?: string | null
+  language?: string | null
+  // Image field
+  thumbnailUrl?: string | null
   goalId?: string | null
 }
 
@@ -143,5 +143,32 @@ export function useDeleteLibraryItem() {
       queryClient.invalidateQueries({ queryKey: ['library'] })
       queryClient.invalidateQueries({ queryKey: ['goals'] })
     },
+  })
+}
+
+interface UploadResult {
+  url: string
+  path: string
+  filename: string
+  size: number
+  type: string
+}
+
+async function uploadLibraryImage(file: File): Promise<UploadResult> {
+  const formData = new FormData()
+  formData.append('file', file)
+
+  const res = await fetch('/api/upload/library', {
+    method: 'POST',
+    body: formData,
+  })
+  const json = await res.json()
+  if (json.error || !json.data) throw new Error(json.error || 'Upload failed')
+  return json.data
+}
+
+export function useUploadLibraryImage() {
+  return useMutation({
+    mutationFn: uploadLibraryImage,
   })
 }

@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { createServerClient } from '@/lib/supabase/server'
 import { ensureUser } from '@/lib/prisma/ensure-user'
 import { createLibraryItemSchema } from '@/lib/validations/library.schema'
-import type { LibraryItemType } from '@prisma/client'
+import type { LibraryItemType, LibraryItemStatus } from '@prisma/client'
 
 export async function GET(request: NextRequest) {
   try {
@@ -19,15 +19,15 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url)
     const type = searchParams.get('type')
+    const status = searchParams.get('status')
     const search = searchParams.get('search')
     const tag = searchParams.get('tag')
-    const showcased = searchParams.get('showcased')
-    const forSale = searchParams.get('forSale')
 
     const items = await prisma.libraryItem.findMany({
       where: {
         userId: user.id,
         ...(type && { type: type as LibraryItemType }),
+        ...(status && { status: status as LibraryItemStatus }),
         ...(search && {
           OR: [
             { title: { contains: search, mode: 'insensitive' } },
@@ -35,8 +35,6 @@ export async function GET(request: NextRequest) {
           ],
         }),
         ...(tag && { tags: { has: tag } }),
-        ...(showcased === 'true' && { isShowcased: true }),
-        ...(forSale === 'true' && { isForSale: true }),
       },
       orderBy: { updatedAt: 'desc' },
       include: {
@@ -77,7 +75,7 @@ export async function POST(request: NextRequest) {
 
     // Clean empty string URLs before validation
     const cleaned = { ...body }
-    for (const key of ['sourceUrl', 'figmaUrl', 'githubUrl']) {
+    for (const key of ['sourceUrl', 'figmaUrl', 'githubUrl', 'thumbnailUrl']) {
       if (cleaned[key] === '') delete cleaned[key]
     }
 
@@ -87,18 +85,19 @@ export async function POST(request: NextRequest) {
       data: {
         userId: user.id,
         type: validatedData.type,
+        status: validatedData.status || 'ACTIVE',
         title: validatedData.title,
         description: validatedData.description,
         sourceUrl: validatedData.sourceUrl || null,
         figmaUrl: validatedData.figmaUrl || null,
         githubUrl: validatedData.githubUrl || null,
-        prompt: validatedData.prompt,
-        aiTool: validatedData.aiTool,
         techStack: validatedData.techStack || [],
         tags: validatedData.tags || [],
-        isShowcased: validatedData.isShowcased ?? false,
-        isForSale: validatedData.isForSale ?? false,
-        price: validatedData.price,
+        // Code fields
+        code: validatedData.code || null,
+        language: validatedData.language || null,
+        // Image field
+        thumbnailUrl: validatedData.thumbnailUrl || null,
         goalId: validatedData.goalId || null,
       },
     })
