@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { Plus, Filter, Search, Loader2 } from 'lucide-react'
+import { Plus, Filter, Search, Loader2, Calendar } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -13,47 +13,70 @@ import { useGoals } from '@/hooks/use-goals'
 import { categoryList } from '@/config/categories'
 import type { TaskFormData } from '@/components/modules/command/TaskForm'
 
-const statusTabs = [
-  { id: 'all', label: 'All' },
-  { id: 'TODO', label: 'To Do' },
-  { id: 'IN_PROGRESS', label: 'In Progress' },
-  { id: 'BLOCKED', label: 'Blocked' },
-  { id: 'DONE', label: 'Done' },
+type WorkflowTab = 'backlog' | 'scheduled' | 'completed'
+
+const workflowTabs: { id: WorkflowTab; label: string }[] = [
+  { id: 'backlog', label: 'Backlog' },
+  { id: 'scheduled', label: 'Scheduled' },
+  { id: 'completed', label: 'Completed' },
 ]
 
+function formatScheduledDate(date: string | Date | null): string {
+  if (!date) return ''
+  const d = new Date(date)
+  return d.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    timeZone: 'UTC',
+  })
+}
+
 export default function TasksPage() {
-  const [activeTab, setActiveTab] = useState('all')
+  const [activeTab, setActiveTab] = useState<WorkflowTab>('backlog')
   const [searchQuery, setSearchQuery] = useState('')
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null)
   const [showCategoryFilter, setShowCategoryFilter] = useState(false)
   const [taskFormOpen, setTaskFormOpen] = useState(false)
 
-  const filter: Record<string, string> = { scheduled: 'false' }
-  if (activeTab !== 'all') filter.status = activeTab
-  if (categoryFilter) filter.category = categoryFilter
+  // Build filters per tab — category filter applies to all
+  const catFilter = categoryFilter ? { category: categoryFilter } : {}
+  const backlogFilter = { scheduled: 'false', ...catFilter }
+  const scheduledFilter = { scheduled: 'true', ...catFilter }
+  const completedFilter = { status: 'DONE', ...catFilter }
 
-  const { data: tasks = [], isLoading } = useTasks(filter)
+  const { data: backlogRaw = [], isLoading: backlogLoading } = useTasks(backlogFilter)
+  const { data: scheduledRaw = [], isLoading: scheduledLoading } = useTasks(scheduledFilter)
+  const { data: completedAll = [], isLoading: completedLoading } = useTasks(completedFilter)
+
+  // Client-filter: exclude DONE and activity-based tasks (those belong to Day Builder)
+  const backlogTasks = useMemo(() => backlogRaw.filter((t) => t.status !== 'DONE' && !t.activityId), [backlogRaw])
+  const scheduledTasks = useMemo(() => scheduledRaw.filter((t) => t.status !== 'DONE' && !t.activityId), [scheduledRaw])
+  const completedTasks = useMemo(() => completedAll.filter((t) => !t.activityId), [completedAll])
+
   const { data: goals = [] } = useGoals({ completed: 'false' })
   const createTask = useCreateTask()
   const deleteTask = useDeleteTask()
 
+  // Pick the active dataset and loading state
+  const activeData = activeTab === 'backlog' ? backlogTasks : activeTab === 'scheduled' ? scheduledTasks : completedTasks
+  const isLoading = activeTab === 'backlog' ? backlogLoading : activeTab === 'scheduled' ? scheduledLoading : completedLoading
+
   const filteredTasks = useMemo(() => {
-    if (!searchQuery.trim()) return tasks
+    if (!searchQuery.trim()) return activeData
     const q = searchQuery.toLowerCase()
-    return tasks.filter(
+    return activeData.filter(
       (t) =>
         t.title.toLowerCase().includes(q) ||
         (t.description && t.description.toLowerCase().includes(q))
     )
-  }, [tasks, searchQuery])
+  }, [activeData, searchQuery])
 
-  const statusCounts = useMemo(() => {
-    const counts: Record<string, number> = { all: tasks.length }
-    for (const t of tasks) {
-      counts[t.status] = (counts[t.status] || 0) + 1
-    }
-    return counts
-  }, [tasks])
+  const tabCounts: Record<WorkflowTab, number> = {
+    backlog: backlogTasks.length,
+    scheduled: scheduledTasks.length,
+    completed: completedTasks.length,
+  }
 
   function handleCreateTask(data: TaskFormData) {
     const scheduledDate = data.scheduledDate
@@ -161,9 +184,9 @@ export default function TasksPage() {
         </div>
       </div>
 
-      {/* Status Tabs */}
+      {/* Workflow Tabs */}
       <div className="flex gap-2 border-b border-border">
-        {statusTabs.map((tab) => (
+        {workflowTabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
@@ -174,11 +197,9 @@ export default function TasksPage() {
             }`}
           >
             {tab.label}
-            {statusCounts[tab.id] !== undefined && (
-              <span className="ml-1.5 text-xs text-text-tertiary">
-                {statusCounts[tab.id]}
-              </span>
-            )}
+            <span className="ml-1.5 text-xs text-text-tertiary">
+              {tabCounts[tab.id]}
+            </span>
           </button>
         ))}
       </div>
@@ -223,12 +244,21 @@ export default function TasksPage() {
       ) : (
         <div className="space-y-2">
           {filteredTasks.map((task) => (
-            <TaskCard
-              key={task.id}
-              task={task}
-              onDelete={handleDeleteTask}
-              isDraggable={false}
-            />
+            <div key={task.id}>
+              <TaskCard
+                task={task}
+                onDelete={handleDeleteTask}
+                isDraggable={false}
+              />
+              {activeTab !== 'backlog' && task.scheduledDate && (
+                <div className="flex items-center gap-1.5 ml-4 mt-1 mb-1">
+                  <Calendar className="h-3 w-3 text-text-tertiary" />
+                  <span className="text-xs text-text-tertiary">
+                    {formatScheduledDate(task.scheduledDate)}
+                  </span>
+                </div>
+              )}
+            </div>
           ))}
         </div>
       )}

@@ -84,7 +84,7 @@ src/
 ├── components/
 │   ├── ui/                 # shadcn/ui primitives
 │   ├── modules/            # Module-specific components
-│   │   ├── command/        # TimeBlock, TaskCard, TaskForm, TaskBacklog, ActivityCatalog, CommandSidebar, DailyTimeline, etc.
+│   │   ├── command/        # TimeBlock, TaskCard, TaskForm, TaskBacklog, ActivityCatalog (read-only), CommandSidebar, DailyTimeline, DayColumn, etc.
 │   │   ├── clients/        # ClientCard, HealthScoreBadge, etc.
 │   │   ├── library/        # LibraryItemCard, LibraryGrid, LibraryItemForm, TagInput
 │   │   └── social/         # TweetDraftCard, TweetDraftForm, TweetGrid
@@ -103,6 +103,7 @@ src/
 └── config/                 # App configuration
     ├── navigation.ts       # Sidebar navigation
     ├── categories.ts       # Task categories with colors
+    ├── activity-presets.ts  # 19 fixed activity presets (source of truth)
     ├── library.ts          # Library type config (colors, icons, labels)
     └── site.ts             # Site metadata
 ```
@@ -120,7 +121,7 @@ Prisma schema located at `prisma/schema.prisma`. Key models:
 ### Core Models
 - **User** - App user with preferences and timezone
 - **Task** - 90-min blocks with category, priority, energy level; links to Activity + Goal
-- **Activity** - Catalog of reusable activities (design, code, tweet, fitness, etc.) that pre-fill task creation
+- **Activity** - 19 fixed activity presets (system-managed, auto-synced) that pre-fill task creation
 - **Goal** - Daily/weekly/monthly/yearly goals with progress; auto-incremented by task completion
 
 ### Client CRM Models
@@ -133,7 +134,7 @@ Prisma schema located at `prisma/schema.prisma`. Key models:
 - **TweetDraft** - Tweet draft with content (280 char limit), status, tags, thread support (tweetNumber/totalTweets)
 
 ### Enums
-- **TaskCategory**: DESIGN, CODE, CLIENT, LEARNING, FITNESS, ADMIN, SAAS, NETWORKING
+- **TaskCategory**: DESIGN, CODE, CLIENT, LEARNING, FITNESS, ADMIN, SAAS, NETWORKING, PERSONAL, LEISURE, ROUTINE
 - **TaskStatus**: TODO, IN_PROGRESS, BLOCKED, DONE
 - **EnergyLevel**: DEEP_WORK, MODERATE, LIGHT
 - **Priority**: LOW, MEDIUM, HIGH, URGENT
@@ -229,8 +230,8 @@ type ApiResponse<T> = {
 The core concept: **Build your day from a curated catalog of activities.**
 
 1. Set **monthly goals** ("Complete 3 projects", "Post 30 tweets", "Work out 20x")
-2. Build an **Activity Catalog** of everything you do (design, code, tweet, fitness, etc.)
-3. Each morning: **select activities** from the catalog to fill your day's 90-min blocks
+2. Choose from **19 fixed activity presets** (design, code, fitness, etc.) — system-managed, no user creation
+3. Each morning: **select activities** from the catalog to fill your day's blocks
 4. **Execute blocks.** Completing them auto-increments linked goal progress.
 5. Daily → weekly → monthly progress compounds.
 
@@ -256,7 +257,7 @@ Clients have a health score (GREEN/YELLOW/RED) based on:
 
 - **Server state** (React Query): Tasks, activities, clients, projects, goals, library, tweet drafts
   - Hooks: `use-tasks.ts`, `use-activities.ts`, `use-goals.ts`, `use-clients.ts`, `use-projects.ts`, `use-library.ts`, `use-tweet-drafts.ts`
-  - Each hook exports `useX`, `useCreateX`, `useUpdateX`, `useDeleteX`
+  - Each hook exports `useX`, `useCreateX`, `useUpdateX`, `useDeleteX` (except `use-activities.ts` which is read-only — `useActivities` only)
   - `use-clients.ts` and `use-projects.ts` also export `useClient(id)` and `useProject(id)` for single-record fetching
   - Mutations auto-invalidate related query caches
 - **Client state** (Zustand): UI state, filters, drafts
@@ -372,6 +373,19 @@ Clients have a health score (GREEN/YELLOW/RED) based on:
 - [x] `TaskBacklog` component: draggable unscheduled tasks for Day Builder
 - [x] Calendar page redesign: continuous timeline (6 AM–11 PM) with proportional task positioning
 - [x] New shadcn/ui components: Command (cmdk), Popover, Select
+
+**Activity Presets + UX Refinements** (Complete)
+- [x] Replaced user-created Activity Catalog with 19 fixed presets (system-managed)
+- [x] Config-driven presets in `src/config/activity-presets.ts` (source of truth)
+- [x] Auto-sync on GET `/api/activities`: creates missing presets, deactivates custom activities
+- [x] Locked activity mutations: POST returns 403, PATCH restricted to `timesUsed`/`lastUsed`, DELETE returns 403
+- [x] Read-only `use-activities.ts` hook (removed `useCreateActivity`, `useUpdateActivity`, `useDeleteActivity`)
+- [x] Read-only `ActivityCatalog` component (removed create/edit/delete UI)
+- [x] Simplified `CommandSidebar` props (removed activity CRUD callbacks)
+- [x] Description-first TaskForm UX: activity-based tasks show description textarea, hide title/category
+- [x] Deleted `ActivityForm.tsx` component
+- [x] Category-colored left border on TimeBlock component (matches calendar view)
+- [x] `DayColumn` component for calendar week view
 
 **Next Up:**
 - [ ] Database migration (waiting for credentials)

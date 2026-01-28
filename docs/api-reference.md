@@ -141,7 +141,7 @@ Delete a task.
 
 ### GET /api/activities
 
-Get all active activities for the authenticated user, ordered by sortOrder then usage frequency.
+Get all active activity presets for the authenticated user, ordered by sortOrder then usage frequency. **Auto-syncs presets**: if any of the 19 predefined presets are missing from the DB, they are created; stale custom activities are deactivated.
 
 **Response:**
 ```json
@@ -149,13 +149,12 @@ Get all active activities for the authenticated user, ordered by sortOrder then 
   "data": [
     {
       "id": "uuid",
-      "title": "Design Work",
-      "description": "Client design deliverables",
+      "title": "Website Design",
       "category": "DESIGN",
       "defaultDuration": 90,
       "energyLevel": "DEEP_WORK",
       "isActive": true,
-      "sortOrder": 0,
+      "sortOrder": 2,
       "timesUsed": 12,
       "lastUsed": "2026-01-25T14:00:00.000Z"
     }
@@ -170,47 +169,33 @@ Get all active activities for the authenticated user, ordered by sortOrder then 
 
 ### POST /api/activities
 
-Create a new activity for the catalog.
+**Returns 403** — Activity presets are system-managed and cannot be created manually.
 
-**Request Body:**
-```json
-{
-  "title": "Design Work",
-  "description": "Client design deliverables",
-  "category": "DESIGN",
-  "defaultDuration": 90,
-  "energyLevel": "DEEP_WORK"
-}
-```
-
-**Status:** Implemented
+**Status:** Locked (403)
 
 ---
 
 ### PATCH /api/activities/[id]
 
-Update an existing activity.
+Update activity usage stats only. Only `timesUsed` and `lastUsed` fields can be updated (used by task completion side effects). All other fields are rejected.
 
 **Request Body:**
 ```json
 {
-  "title": "Updated title",
-  "defaultDuration": 120,
-  "isActive": false
+  "timesUsed": 13,
+  "lastUsed": "2026-01-27T14:00:00.000Z"
 }
 ```
 
-All fields are optional.
-
-**Status:** Implemented
+**Status:** Implemented (restricted)
 
 ---
 
 ### DELETE /api/activities/[id]
 
-Delete an activity.
+**Returns 403** — Activity presets are system-managed and cannot be deleted.
 
-**Status:** Implemented
+**Status:** Locked (403)
 
 ---
 
@@ -620,10 +605,10 @@ Delete a tweet draft. Returns 404 if not found or not owned by user.
 | `POST /api/tasks` | Implemented |
 | `PATCH /api/tasks/[id]` | Implemented |
 | `DELETE /api/tasks/[id]` | Implemented |
-| `GET /api/activities` | Implemented |
-| `POST /api/activities` | Implemented |
-| `PATCH /api/activities/[id]` | Implemented |
-| `DELETE /api/activities/[id]` | Implemented |
+| `GET /api/activities` | Implemented (auto-syncs presets) |
+| `POST /api/activities` | Locked (403 — system-managed) |
+| `PATCH /api/activities/[id]` | Implemented (usage stats only) |
+| `DELETE /api/activities/[id]` | Locked (403 — system-managed) |
 | `GET /api/clients` | Implemented |
 | `POST /api/clients` | Implemented |
 | `GET /api/clients/[id]` | Implemented |
